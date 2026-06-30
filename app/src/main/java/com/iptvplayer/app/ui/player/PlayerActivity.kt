@@ -288,6 +288,8 @@ class PlayerActivity : AppCompatActivity() {
     private fun hideControls() {
         binding.topBar.visibility    = View.GONE
         binding.bottomBar.visibility = View.GONE
+        resetButtonHighlights()
+        focusedButtonIndex = 3 // reset to play button
     }
 
     private fun toggleControls() {
@@ -380,60 +382,149 @@ class PlayerActivity : AppCompatActivity() {
 
     // ── Keys ──────────────────────────────────────────────────────────────────
 
+    // Bottom bar button IDs in order for remote navigation
+    private val controlButtons by lazy {
+        listOf(
+            binding.btnLock,
+            binding.btnAspect,
+            binding.btnPrev,
+            binding.btnPlayPause,
+            binding.btnNext,
+            binding.btnEpgList,
+            binding.btnSubtitle,
+            binding.btnSettings
+        )
+    }
+    private var focusedButtonIndex = 3 // default: btnPlayPause
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         return when (keyCode) {
-            // MENU / channel list toggle
-            KeyEvent.KEYCODE_MENU -> { toggleChannelList(); true }
 
-            // Channel UP — previous channel
-            KeyEvent.KEYCODE_CHANNEL_UP,
-            KeyEvent.KEYCODE_PAGE_UP,
-            KeyEvent.KEYCODE_DPAD_UP -> { navigateChannel(-1); true }
-
-            // Channel DOWN — next channel
-            KeyEvent.KEYCODE_CHANNEL_DOWN,
-            KeyEvent.KEYCODE_PAGE_DOWN,
-            KeyEvent.KEYCODE_DPAD_DOWN -> { navigateChannel(+1); true }
-
-            // OK / Enter / D-pad center → toggle controls or select from list
+            // ── OK / Enter → menu open OR focused button click ────────────────
             KeyEvent.KEYCODE_DPAD_CENTER,
             KeyEvent.KEYCODE_ENTER,
             KeyEvent.KEYCODE_BUTTON_A -> {
-                if (binding.channelListOverlay.visibility == View.VISIBLE) {
-                    // overlay খোলা থাকলে selected channel play করবে
-                    hideChannelList()
-                } else {
-                    toggleControls()
+                when {
+                    // Channel overlay খোলা → close
+                    binding.channelListOverlay.visibility == View.VISIBLE -> {
+                        hideChannelList()
+                    }
+                    // Controls দেখা আছে → focused button click
+                    binding.bottomBar.visibility == View.VISIBLE -> {
+                        controlButtons.getOrNull(focusedButtonIndex)?.performClick()
+                        scheduleHide()
+                    }
+                    // Controls hidden → show করো
+                    else -> showControls()
                 }
                 true
             }
 
-            // D-pad left/right → পূর্ববর্তী/পরবর্তী channel (alternate)
-            KeyEvent.KEYCODE_DPAD_LEFT,
-            KeyEvent.KEYCODE_MEDIA_PREVIOUS -> { navigateChannel(-1); true }
+            // ── MENU button → channel list toggle ─────────────────────────────
+            KeyEvent.KEYCODE_MENU -> {
+                toggleChannelList()
+                true
+            }
 
-            KeyEvent.KEYCODE_DPAD_RIGHT,
-            KeyEvent.KEYCODE_MEDIA_NEXT -> { navigateChannel(+1); true }
+            // ── UP → আগের channel ─────────────────────────────────────────────
+            KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_CHANNEL_UP,
+            KeyEvent.KEYCODE_PAGE_UP -> {
+                if (binding.channelListOverlay.visibility == View.VISIBLE) {
+                    val lm = binding.recyclerChannelList.layoutManager
+                            as? androidx.recyclerview.widget.LinearLayoutManager
+                    val pos = (lm?.findFirstVisibleItemPosition() ?: 1) - 1
+                    if (pos >= 0) binding.recyclerChannelList.smoothScrollToPosition(pos)
+                } else {
+                    navigateChannel(-1)
+                }
+                true
+            }
 
-            // Play/Pause
+            // ── DOWN → পরের channel ───────────────────────────────────────────
+            KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_CHANNEL_DOWN,
+            KeyEvent.KEYCODE_PAGE_DOWN -> {
+                if (binding.channelListOverlay.visibility == View.VISIBLE) {
+                    val lm = binding.recyclerChannelList.layoutManager
+                            as? androidx.recyclerview.widget.LinearLayoutManager
+                    val pos = (lm?.findLastVisibleItemPosition() ?: 0) + 1
+                    if (pos < channelList.size) binding.recyclerChannelList.smoothScrollToPosition(pos)
+                } else {
+                    navigateChannel(+1)
+                }
+                true
+            }
+
+            // ── LEFT → আগের control button-এ focus ───────────────────────────
+            KeyEvent.KEYCODE_DPAD_LEFT -> {
+                if (binding.channelListOverlay.visibility == View.VISIBLE) {
+                    // overlay-এ থাকলে কিছু না
+                } else {
+                    if (binding.bottomBar.visibility != View.VISIBLE) {
+                        showControls()
+                    } else {
+                        focusedButtonIndex = (focusedButtonIndex - 1 + controlButtons.size) % controlButtons.size
+                        highlightButton(focusedButtonIndex)
+                        scheduleHide()
+                    }
+                }
+                true
+            }
+
+            // ── RIGHT → পরের control button-এ focus ──────────────────────────
+            KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                if (binding.channelListOverlay.visibility == View.VISIBLE) {
+                    // overlay-এ থাকলে কিছু না
+                } else {
+                    if (binding.bottomBar.visibility != View.VISIBLE) {
+                        showControls()
+                    } else {
+                        focusedButtonIndex = (focusedButtonIndex + 1) % controlButtons.size
+                        highlightButton(focusedButtonIndex)
+                        scheduleHide()
+                    }
+                }
+                true
+            }
+
+            // ── Play/Pause ────────────────────────────────────────────────────
             KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
             KeyEvent.KEYCODE_SPACE,
             KeyEvent.KEYCODE_MEDIA_PLAY,
-            KeyEvent.KEYCODE_MEDIA_PAUSE -> { binding.btnPlayPause.performClick(); true }
+            KeyEvent.KEYCODE_MEDIA_PAUSE -> {
+                binding.btnPlayPause.performClick()
+                true
+            }
 
-            // Volume handled by system
+            // ── Volume keys → system ─────────────────────────────────────────
             KeyEvent.KEYCODE_VOLUME_UP,
             KeyEvent.KEYCODE_VOLUME_DOWN -> false
 
-            // Back → close overlay or exit player
+            // ── Back ──────────────────────────────────────────────────────────
             KeyEvent.KEYCODE_BACK -> {
-                if (binding.channelListOverlay.visibility == View.VISIBLE) {
-                    hideChannelList(); true
-                } else super.onKeyDown(keyCode, event)
+                when {
+                    binding.channelListOverlay.visibility == View.VISIBLE -> { hideChannelList(); true }
+                    binding.bottomBar.visibility == View.VISIBLE -> { hideControls(); true }
+                    else -> super.onKeyDown(keyCode, event)
+                }
             }
 
             else -> super.onKeyDown(keyCode, event)
         }
+    }
+
+    /** Highlight the focused button with orange tint, reset others to white */
+    private fun highlightButton(index: Int) {
+        controlButtons.forEachIndexed { i, btn ->
+            val color = if (i == index) getColor(R.color.colorOrange) else android.graphics.Color.WHITE
+            btn.setColorFilter(color)
+        }
+    }
+
+    /** Reset all button tints to white */
+    private fun resetButtonHighlights() {
+        controlButtons.forEach { it.setColorFilter(android.graphics.Color.WHITE) }
     }
 
     // ── Clock ─────────────────────────────────────────────────────────────────

@@ -22,6 +22,16 @@ class ChannelListAdapter(
             notifyDataSetChanged()
         }
 
+    /** Remote-focused item index (orange highlight) */
+    private var focusedIndex: Int = -1
+
+    fun setFocused(index: Int) {
+        val old = focusedIndex
+        focusedIndex = index
+        if (old >= 0) notifyItemChanged(old)
+        notifyItemChanged(focusedIndex)
+    }
+
     inner class ViewHolder(private val b: ItemChannelListBinding) :
         RecyclerView.ViewHolder(b.root) {
 
@@ -29,11 +39,14 @@ class ChannelListAdapter(
             b.tvNumber.text = (position + 1).toString()
             b.tvChannelName.text = channel.name
 
-            // Highlight selected channel
-            if (channel.url == selectedUrl) {
-                b.root.setBackgroundColor(Color.parseColor("#8B0000"))
-            } else {
-                b.root.setBackgroundColor(Color.TRANSPARENT)
+            // Highlight: playing = dark red, focused by remote = orange, normal = transparent
+            when {
+                position == focusedIndex ->
+                    b.root.setBackgroundColor(Color.parseColor("#CC6600"))  // orange
+                channel.url == selectedUrl ->
+                    b.root.setBackgroundColor(Color.parseColor("#8B0000"))  // dark red
+                else ->
+                    b.root.setBackgroundColor(Color.TRANSPARENT)
             }
 
             if (channel.logoUrl.isNotEmpty()) {

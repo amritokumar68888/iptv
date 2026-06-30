@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
@@ -39,8 +40,9 @@ class ChannelListActivity : AppCompatActivity() {
 
     private var isGridView      = false
     private var isSearchVisible = false
-    private var allChannels: List<Channel> = emptyList()   // full list
-    private var channelList: List<Channel> = emptyList()   // currently shown
+    private var allChannels: List<Channel> = emptyList()
+    private var channelList: List<Channel> = emptyList()
+    private var focusedIndex    = 0   // currently focused channel index for remote
 
     private lateinit var listAdapter: ChannelListAdapter
     private lateinit var gridAdapter: ChannelGridAdapter
@@ -245,5 +247,75 @@ class ChannelListActivity : AppCompatActivity() {
         } else {
             super.onBackPressed()
         }
+    }
+
+    // ── TV Remote Key Handling ────────────────────────────────────────────────
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        return when (keyCode) {
+
+            // OK / Enter → play focused channel
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_BUTTON_A -> {
+                if (channelList.isNotEmpty()) {
+                    openPlayer(channelList[focusedIndex])
+                }
+                true
+            }
+
+            // UP → আগের channel
+            KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_CHANNEL_UP,
+            KeyEvent.KEYCODE_PAGE_UP -> {
+                if (channelList.isNotEmpty()) {
+                    focusedIndex = if (focusedIndex > 0) focusedIndex - 1 else 0
+                    scrollAndHighlight(focusedIndex)
+                }
+                true
+            }
+
+            // DOWN → পরের channel
+            KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_CHANNEL_DOWN,
+            KeyEvent.KEYCODE_PAGE_DOWN -> {
+                if (channelList.isNotEmpty()) {
+                    focusedIndex = if (focusedIndex < channelList.size - 1)
+                        focusedIndex + 1 else channelList.size - 1
+                    scrollAndHighlight(focusedIndex)
+                }
+                true
+            }
+
+            // LEFT → grid/list toggle
+            KeyEvent.KEYCODE_DPAD_LEFT -> {
+                if (!isGridView) { /* already list */ } else {
+                    isGridView = false; setListView()
+                }
+                true
+            }
+
+            // RIGHT → grid/list toggle
+            KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                if (isGridView) { /* already grid */ } else {
+                    isGridView = true; setGridView()
+                }
+                true
+            }
+
+            // Back
+            KeyEvent.KEYCODE_BACK -> {
+                if (isSearchVisible) { closeSearch(); true }
+                else super.onKeyDown(keyCode, event)
+            }
+
+            else -> super.onKeyDown(keyCode, event)
+        }
+    }
+
+    private fun scrollAndHighlight(index: Int) {
+        binding.recyclerChannels.scrollToPosition(index)
+        // Update selected highlight in adapter
+        listAdapter.setFocused(index)
     }
 }
