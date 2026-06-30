@@ -97,8 +97,8 @@ class PlayerActivity : AppCompatActivity() {
             }
         }
 
-        // Aspect / Fullscreen toggle button
-        binding.btnAspect.setOnClickListener { toggleOrientation() }
+    // Aspect / Fullscreen toggle button
+    binding.btnAspect.setOnClickListener { cycleAspectMode() }
 
         binding.btnLock.setOnClickListener {
             hideControls()
@@ -141,11 +141,24 @@ class PlayerActivity : AppCompatActivity() {
 
     // ── Orientation / Fullscreen ──────────────────────────────────────────────
 
+    private var aspectModeIndex = 0  // 0=zoom(full), 1=fit(letterbox), 2=fill(stretch)
+    private val aspectModes = listOf(
+        androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
+        androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT,
+        androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL
+    )
+    private val aspectLabels = listOf("Zoom (Full)", "Fit (Letterbox)", "Stretch")
+
+    private fun cycleAspectMode() {
+        aspectModeIndex = (aspectModeIndex + 1) % aspectModes.size
+        binding.playerView.resizeMode = aspectModes[aspectModeIndex]
+        Toast.makeText(this, aspectLabels[aspectModeIndex], Toast.LENGTH_SHORT).show()
+    }
+
     private fun goLandscape() {
         isLandscape = true
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         hideSystemUi()
-        // Update icon to show "exit fullscreen" option
         binding.btnAspect.setImageResource(R.drawable.ic_fullscreen_exit)
     }
 
@@ -153,7 +166,6 @@ class PlayerActivity : AppCompatActivity() {
         isLandscape = false
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         showSystemUi()
-        // Update icon to show "enter fullscreen" option
         binding.btnAspect.setImageResource(R.drawable.ic_fullscreen)
     }
 
