@@ -89,6 +89,11 @@ class PlayerActivity : AppCompatActivity() {
         // Default logo — app logo দেখাবে
         binding.ivChannelLogo.setImageResource(R.drawable.logo)
 
+        // PlayerView-এ focus দাও — remote OK চাপলে back না হয়ে playerView-এ যায়
+        binding.playerView.isFocusable = true
+        binding.playerView.isFocusableInTouchMode = false
+        binding.playerView.requestFocus()
+
         // ── Buttons ──────────────────────────────────────────────────────────
         binding.btnBack.setOnClickListener { finish() }
         binding.btnChannelList.setOnClickListener { toggleChannelList() }

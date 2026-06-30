@@ -77,7 +77,9 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_arrow_back"
                 android:tint="@android:color/white"
-                android:contentDescription="@string/back" />
+                android:contentDescription="@string/back"
+                android:focusable="false"
+                android:focusableInTouchMode="false" />
 
         </FrameLayout>
 
@@ -206,6 +208,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_lock"
                 android:tint="@android:color/white"
+                android:focusable="false"
                 android:contentDescription="Lock" />
 
             <ImageButton
@@ -216,6 +219,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_aspect"
                 android:tint="@android:color/white"
+                android:focusable="false"
                 android:contentDescription="Aspect" />
 
             <ImageButton
@@ -226,6 +230,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_skip_previous"
                 android:tint="@android:color/white"
+                android:focusable="false"
                 android:contentDescription="Previous" />
 
             <ImageButton
@@ -236,6 +241,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_play"
                 android:tint="@android:color/white"
+                android:focusable="false"
                 android:contentDescription="Play/Pause" />
 
             <ImageButton
@@ -246,6 +252,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_skip_next"
                 android:tint="@android:color/white"
+                android:focusable="false"
                 android:contentDescription="Next" />
 
             <ImageButton
@@ -256,6 +263,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_list"
                 android:tint="@android:color/white"
+                android:focusable="false"
                 android:contentDescription="Channel List" />
 
             <ImageButton
@@ -266,6 +274,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_cc"
                 android:tint="@android:color/white"
+                android:focusable="false"
                 android:contentDescription="Subtitle" />
 
             <ImageButton
@@ -276,6 +285,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_settings"
                 android:tint="@android:color/white"
+                android:focusable="false"
                 android:contentDescription="Settings" />
 
         </LinearLayout>
