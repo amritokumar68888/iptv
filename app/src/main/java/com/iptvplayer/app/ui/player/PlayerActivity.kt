@@ -105,16 +105,24 @@ class PlayerActivity : AppCompatActivity() {
             Toast.makeText(this, "Settings", Toast.LENGTH_SHORT).show()
         }
 
-        // Tap on player to show/hide controls
+        // Tap anywhere on screen to show/hide controls
         val gestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
             override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
                 toggleControls()
                 return true
             }
         })
+
+        // Touch on playerView
         binding.playerView.setOnTouchListener { _, event ->
             gestureDetector.onTouchEvent(event)
-            false
+            true
+        }
+
+        // Touch on the root layout (black area)
+        binding.root.setOnTouchListener { _, event ->
+            gestureDetector.onTouchEvent(event)
+            true
         }
 
         // Channel list overlay adapter
@@ -164,7 +172,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun scheduleHide() {
         hideHandler.removeCallbacks(hideRunnable)
-        hideHandler.postDelayed(hideRunnable, 4000)
+        hideHandler.postDelayed(hideRunnable, 6000) // 6 seconds
     }
 
     // ── Channel navigation ───────────────────────────────────────────────────
