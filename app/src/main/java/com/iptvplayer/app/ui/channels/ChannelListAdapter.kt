@@ -37,12 +37,12 @@ class ChannelListAdapter(
             b.tvNumber.text = (position + 1).toString()
             b.tvChannelName.text = channel.name
 
-            // Highlight currently playing channel
+            // Highlight: playing = dark red, focused by remote = orange tint
             when {
                 channel.url == selectedUrl ->
                     b.root.setBackgroundColor(Color.parseColor("#8B0000"))
                 position == focusedIndex ->
-                    b.root.setBackgroundColor(Color.parseColor("#CC6600"))
+                    b.root.setBackgroundColor(Color.parseColor("#1AE87722"))
                 else ->
                     b.root.setBackgroundColor(Color.TRANSPARENT)
             }

@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
@@ -43,6 +44,9 @@ class ChannelListActivity : AppCompatActivity() {
     private var allChannels: List<Channel> = emptyList()
     private var channelList: List<Channel> = emptyList()
 
+    // Remote navigation focus index
+    private var focusedIndex = 0
+
     private lateinit var listAdapter: ChannelListAdapter
     private lateinit var gridAdapter: ChannelGridAdapter
 
@@ -66,6 +70,11 @@ class ChannelListActivity : AppCompatActivity() {
 
         listAdapter = ChannelListAdapter { channel -> openPlayer(channel) }
         gridAdapter = ChannelGridAdapter { channel -> openPlayer(channel) }
+
+        // RecyclerView — disable built-in focus so we manage it manually
+        binding.recyclerChannels.descendantFocusability =
+            android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS
+        binding.recyclerChannels.isFocusable = false
 
         setListView()
 
@@ -105,6 +114,50 @@ class ChannelListActivity : AppCompatActivity() {
         if (m3uUrl.isNotEmpty()) loadChannels(m3uUrl, mode)
     }
 
+    // ── Remote key handling ───────────────────────────────────────────────────
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (isSearchVisible) return super.dispatchKeyEvent(event)
+        if (event.action != KeyEvent.ACTION_DOWN) return true
+
+        return when (event.keyCode) {
+            KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_CHANNEL_DOWN,
+            KeyEvent.KEYCODE_PAGE_DOWN -> {
+                moveFocus(+1); true
+            }
+            KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_CHANNEL_UP,
+            KeyEvent.KEYCODE_PAGE_UP -> {
+                moveFocus(-1); true
+            }
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_BUTTON_A -> {
+                if (channelList.isNotEmpty()) {
+                    openPlayer(channelList[focusedIndex])
+                }
+                true
+            }
+            KeyEvent.KEYCODE_BACK -> {
+                if (isSearchVisible) { closeSearch(); true }
+                else { finish(); true }
+            }
+            else -> super.dispatchKeyEvent(event)
+        }
+    }
+
+    private fun moveFocus(direction: Int) {
+        if (channelList.isEmpty()) return
+        val newIndex = (focusedIndex + direction).coerceIn(0, channelList.size - 1)
+        focusedIndex = newIndex
+        listAdapter.setFocused(focusedIndex)
+        gridAdapter.notifyDataSetChanged()
+        binding.recyclerChannels.scrollToPosition(focusedIndex)
+    }
+
+    // ── Search ────────────────────────────────────────────────────────────────
+
     private fun closeSearch() {
         isSearchVisible = false
         binding.searchBar.visibility = View.GONE
@@ -118,11 +171,15 @@ class ChannelListActivity : AppCompatActivity() {
         val filtered = if (query.isEmpty()) allChannels
         else allChannels.filter { it.name.contains(query, ignoreCase = true) }
         channelList = filtered
+        focusedIndex = 0
+        listAdapter.setFocused(0)
         showChannels(filtered)
         if (filtered.isEmpty() && query.isNotEmpty()) {
             binding.tvEmpty.text = "\"$query\" পাওয়া যায়নি"
         }
     }
+
+    // ── View modes ────────────────────────────────────────────────────────────
 
     private fun setListView() {
         binding.btnToggleView.setImageResource(R.drawable.ic_grid)
@@ -147,8 +204,12 @@ class ChannelListActivity : AppCompatActivity() {
             binding.recyclerChannels.visibility = View.VISIBLE
             if (isGridView) gridAdapter.submitList(list)
             else listAdapter.submitList(list)
+            // Focus first item initially
+            listAdapter.setFocused(focusedIndex)
         }
     }
+
+    // ── Load channels ─────────────────────────────────────────────────────────
 
     private fun loadChannels(url: String, mode: String) {
         binding.progressBar.visibility      = View.VISIBLE
@@ -160,16 +221,13 @@ class ChannelListActivity : AppCompatActivity() {
                 val content = withContext(Dispatchers.IO) {
                     when {
                         url.startsWith(ASSET_PREFIX) -> {
-                            // Built-in asset file
                             val fileName = url.removePrefix(ASSET_PREFIX)
                             assets.open(fileName).bufferedReader().use { it.readText() }
                         }
                         url.startsWith("file://") -> {
-                            // Locally cached file (from Google Drive update)
                             File(url.removePrefix("file://")).readText()
                         }
                         else -> {
-                            // Remote URL
                             val request = Request.Builder().url(url).build()
                             client.newCall(request).execute().use { response ->
                                 if (!response.isSuccessful) throw Exception("HTTP ${response.code}")
@@ -196,6 +254,7 @@ class ChannelListActivity : AppCompatActivity() {
                     else -> parsed
                 }
                 channelList = allChannels
+                focusedIndex = 0
 
                 binding.progressBar.visibility = View.GONE
                 showChannels(channelList)
@@ -203,10 +262,14 @@ class ChannelListActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 binding.progressBar.visibility = View.GONE
                 binding.tvEmpty.visibility     = View.VISIBLE
-                Toast.makeText(this@ChannelListActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(
+                    this@ChannelListActivity, "Error: ${e.message}", Toast.LENGTH_LONG
+                ).show()
             }
         }
     }
+
+    // ── Open player ───────────────────────────────────────────────────────────
 
     private fun openPlayer(channel: Channel) {
         RecentManager.add(this, channel)
@@ -215,8 +278,14 @@ class ChannelListActivity : AppCompatActivity() {
             putExtra(PlayerActivity.EXTRA_CHANNEL_URL,   channel.url)
             putExtra(PlayerActivity.EXTRA_CHANNEL_LOGO,  channel.logoUrl)
             putExtra(PlayerActivity.EXTRA_CHANNEL_INDEX, channelList.indexOf(channel))
-            putStringArrayListExtra(PlayerActivity.EXTRA_CHANNEL_LIST_NAMES, ArrayList(channelList.map { it.name }))
-            putStringArrayListExtra(PlayerActivity.EXTRA_CHANNEL_LIST_URLS,  ArrayList(channelList.map { it.url }))
+            putStringArrayListExtra(
+                PlayerActivity.EXTRA_CHANNEL_LIST_NAMES,
+                ArrayList(channelList.map { it.name })
+            )
+            putStringArrayListExtra(
+                PlayerActivity.EXTRA_CHANNEL_LIST_URLS,
+                ArrayList(channelList.map { it.url })
+            )
         })
     }
 
