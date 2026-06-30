@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Sky OTT</string>
+    <string name="live_tv">Live TV</string>
+
+    <!-- Home -->
+    <string name="all_channels">All Channels</string>
+    <string name="recent_watch">Recent Watch</string>
+
+    <!-- Player -->
+    <string name="back">Back</string>
+    <string name="error_invalid_url">Invalid stream URL</string>
+    <string name="error_playback">Playback error: %s</string>
+    <string name="no_program">No Program found</string>
+    <string name="channel_list">Channel List</string>
+
+    <!-- Misc -->
+    <string name="no_channels">No channels found</string>
+    <string name="toggle_favorite">Favourite</string>
+    <string name="search_hint">Search channels…</string>
+    <string name="confirm_exit">Confirm Exit</string>
+    <string name="exit_message">Are you sure you want to Exit ?</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="refresh">Refresh</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
+    <string name="error_url_required">URL is required</string>
+    <string name="enter_m3u_url">M3U URL দিন</string>
+    <string name="load">Load</string>
+    <string name="pip_mode">Picture in Picture</string>
+    <string name="add_playlist">Add Playlist</string>
+    <string name="playlist_name">Playlist Name</string>
+    <string name="playlist_url">M3U URL</string>
+    <string name="error_loading_playlist">Failed to load playlist: %s</string>
+    <string name="error_name_required">Name is required</string>
+</resources>

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IPTV Player - App Preview</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',sans-serif; background:#1a1a2e; display:flex; flex-direction:column; align-items:center; min-height:100vh; padding:20px; }
+h1 { color:#fff; margin-bottom:8px; font-size:22px; }
+.subtitle { color:#aaa; margin-bottom:30px; font-size:13px; }
+.screens { display:flex; flex-wrap:wrap; gap:20px; justify-content:center; }
+.phone { width:320px; border-radius:36px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6); background:#fff; border:8px solid #222; position:relative; }
+.phone-screen { width:100%; min-height:580px; display:flex; flex-direction:column; overflow:hidden; }
+.screen-label { position:absolute; top:-28px; left:0; right:0; text-align:center; color:#ccc; font-size:12px; font-weight:600; letter-spacing:1px; }
+
+/* Status bar */
+.status-bar { background:#1565C0; color:#fff; font-size:10px; padding:4px 12px; display:flex; justify-content:space-between; }
+
+/* Toolbar */
+.toolbar { background:#1565C0; color:#fff; padding:14px 16px; font-size:17px; font-weight:700; display:flex; align-items:center; gap:10px; }
+.toolbar .back { font-size:20px; cursor:pointer; }
+
+/* Bottom nav */
+.bottom-nav { background:#fff; border-top:1px solid #eee; display:flex; padding:6px 0; position:sticky; bottom:0; box-shadow:0 -2px 8px rgba(0,0,0,0.08); }
+.nav-item { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; cursor:pointer; padding:4px; border-radius:8px; transition:background 0.2s; }
+.nav-item:hover, .nav-item.active { background:#E3F0FF; }
+.nav-item svg { width:22px; height:22px; }
+.nav-item span { font-size:10px; color:#555; }
+.nav-item.active span { color:#1565C0; font-weight:700; }
+.nav-item.active svg path { fill:#1565C0; }
+
+/* Content area */
+.content { flex:1; background:#F5F5F5; overflow-y:auto; }
+</style>
+
+<style>
+/* Splash */
+.splash { background:linear-gradient(135deg,#1565C0,#0D47A1); display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:580px; }
+.splash svg { width:90px; height:90px; margin-bottom:16px; }
+.splash h2 { color:#fff; font-size:26px; font-weight:800; }
+.splash p { color:rgba(255,255,255,0.7); font-size:13px; margin-top:6px; }
+.splash-dot { width:8px; height:8px; background:rgba(255,255,255,0.5); border-radius:50%; margin-top:30px; animation:pulse 1.2s infinite; }
+@keyframes pulse { 0%,100%{opacity:0.3;transform:scale(0.8)} 50%{opacity:1;transform:scale(1.2)} }
+
+/* Playlist screen */
+.playlist-card { background:#fff; border-radius:10px; margin:8px 12px; padding:14px; display:flex; align-items:center; gap:12px; box-shadow:0 1px 4px rgba(0,0,0,0.1); cursor:pointer; transition:transform 0.15s,box-shadow 0.15s; }
+.playlist-card:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.15); }
+.playlist-icon { width:44px; height:44px; background:#E3F0FF; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.playlist-info { flex:1; overflow:hidden; }
+.playlist-name { font-weight:700; font-size:14px; color:#222; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.playlist-url { font-size:11px; color:#999; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+.playlist-actions { display:flex; gap:4px; }
+.icon-btn { width:32px; height:32px; border:none; background:none; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.2s; }
+.icon-btn:hover { background:#f0f0f0; }
+.fab { position:fixed; bottom:70px; right:calc(50% - 160px + 16px); width:52px; height:52px; background:#FF6F00; border-radius:50%; box-shadow:0 4px 12px rgba(255,111,0,0.5); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:transform 0.2s; z-index:10; }
+.fab:hover { transform:scale(1.1); }
+.fab svg path { fill:#fff; }
+.empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 20px; opacity:0.5; }
+.empty-state svg { width:70px; height:70px; margin-bottom:12px; }
+.empty-state p { font-size:15px; text-align:center; }
+</style>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fun Time IPTV color palette -->
+    <color name="colorPrimary">#E87722</color>       <!-- orange accent -->
+    <color name="colorPrimaryVariant">#C45F00</color>
+    <color name="colorOnPrimary">#FFFFFF</color>
+    <color name="colorSecondary">#E87722</color>
+    <color name="colorOnSecondary">#FFFFFF</color>
+
+    <color name="colorBackground">#0D0D0D</color>    <!-- near-black app bg -->
+    <color name="colorSurface">#1A1A1A</color>       <!-- card/surface bg -->
+    <color name="colorSurfaceVariant">#252525</color>
+    <color name="colorOnSurface">#FFFFFF</color>
+    <color name="colorOnSurfaceVariant">#AAAAAA</color>
+
+    <color name="colorCard">#1C1C1C</color>          <!-- channel card -->
+    <color name="colorCardSelected">#8B0000</color>  <!-- selected/active dark red -->
+    <color name="colorDivider">#2A2A2A</color>
+    <color name="colorOrange">#E87722</color>
+    <color name="colorOrangeLight">#FFB347</color>
+    <color name="colorError">#CF6679</color>
+
+    <color name="colorLogoBackground">#2A2A2A</color>
+    <color name="colorNumberOrange">#E87722</color>
+    <color name="colorChannelName">#FFFFFF</color>
+    <color name="colorEpgText">#E87722</color>
+    <color name="colorSubText">#888888</color>
+</resources>
