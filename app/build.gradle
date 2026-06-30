@@ -17,20 +17,21 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // signingConfigs MUST be before buildTypes
+    signingConfigs {
+        release {
+            storeFile     file(System.getenv("KEYSTORE_PATH") ?: "skyott.jks")
+            storePassword System.getenv("KEYSTORE_PASS")     ?: "skyott123"
+            keyAlias      System.getenv("KEY_ALIAS")         ?: "skyott"
+            keyPassword   System.getenv("KEY_PASS")          ?: "skyott123"
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
-        }
-    }
-
-    signingConfigs {
-        release {
-            storeFile file(System.getenv("KEYSTORE_PATH") ?: "skyott.jks")
-            storePassword System.getenv("KEYSTORE_PASS") ?: "skyott123"
-            keyAlias System.getenv("KEY_ALIAS") ?: "skyott"
-            keyPassword System.getenv("KEY_PASS") ?: "skyott123"
         }
     }
 
