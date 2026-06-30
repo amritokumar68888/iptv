@@ -232,6 +232,10 @@ class PlayerActivity : AppCompatActivity() {
                     binding.progressBuffering.visibility = View.GONE
                     binding.tvError.visibility = View.VISIBLE
                     binding.tvError.text = getString(R.string.error_playback, error.message)
+                    // Error হলে controls সবসময় দেখাবে যাতে channel change করা যায়
+                    showControls()
+                    // Auto-hide বন্ধ রাখি error state-এ
+                    hideHandler.removeCallbacks(hideRunnable)
                 }
             })
         }
