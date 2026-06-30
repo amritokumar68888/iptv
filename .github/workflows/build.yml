@@ -35,7 +35,7 @@ jobs:
       - name: Generate Keystore
         run: |
           keytool -genkey -v \
-            -keystore skyott.jks \
+            -keystore app/skyott.jks \
             -alias skyott \
             -keyalg RSA \
             -keysize 2048 \
@@ -44,36 +44,17 @@ jobs:
             -keypass skyott123 \
             -dname "CN=Sky OTT, OU=App, O=SkyOTT, L=Dhaka, ST=Dhaka, C=BD"
 
-      - name: Build Release APK
+      - name: Build Signed Release APK
+        env:
+          KEYSTORE_PATH: skyott.jks
+          KEYSTORE_PASS: skyott123
+          KEY_ALIAS: skyott
+          KEY_PASS: skyott123
         run: ./gradlew assembleRelease --stacktrace
-
-      - name: Sign and align APK
-        run: |
-          UNSIGNED=app/build/outputs/apk/release/app-release-unsigned.apk
-          SIGNED=app/build/outputs/apk/release/app-release-signed.apk
-          ALIGNED=app/build/outputs/apk/release/SkyOTT-release.apk
-          BUILD_TOOLS=$ANDROID_HOME/build-tools/34.0.0
-
-          # Step 1: sign
-          jarsigner \
-            -sigalg SHA256withRSA \
-            -digestalg SHA-256 \
-            -keystore skyott.jks \
-            -storepass skyott123 \
-            -keypass skyott123 \
-            -signedjar "$SIGNED" \
-            "$UNSIGNED" \
-            skyott
-
-          # Step 2: zipalign the signed APK
-          $BUILD_TOOLS/zipalign -v -p 4 "$SIGNED" "$ALIGNED"
-
-          echo "✅ Final APK: $ALIGNED"
-          ls -lh app/build/outputs/apk/release/
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: SkyOTT-release
-          path: app/build/outputs/apk/release/SkyOTT-release.apk
+          path: app/build/outputs/apk/release/app-release.apk
           retention-days: 30
