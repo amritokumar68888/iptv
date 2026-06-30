@@ -34,4 +34,16 @@
     <string name="playlist_url">M3U URL</string>
     <string name="error_loading_playlist">Failed to load playlist: %s</string>
     <string name="error_name_required">Name is required</string>
+
+    <!-- Missing strings referenced by layout files -->
+    <string name="add_playlist_desc">Enter a name and M3U playlist URL</string>
+    <string name="splash_tagline">The Internet Provider</string>
+    <string name="no_favorites">No Favorites Yet</string>
+    <string name="no_playlists">No Playlists Yet</string>
+    <string name="add_playlist_hint">Tap + to add your first playlist</string>
+    <string name="search_prompt">Type to search channels</string>
+    <string name="nav_playlists">Playlists</string>
+    <string name="nav_channels">Channels</string>
+    <string name="nav_favorites">Favorites</string>
+    <string name="nav_search">Search</string>
 </resources>
