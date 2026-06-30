@@ -365,13 +365,13 @@ class PlayerActivity : AppCompatActivity() {
     // ── ExoPlayer ─────────────────────────────────────────────────────────────
 
     private fun initializePlayer(url: String) {
-        // Better buffering for smooth playback
+        // Better buffering for smooth HD playback
         val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                15_000,   // min buffer: 15s
-                60_000,   // max buffer: 60s
-                2_500,    // buffer to start playback: 2.5s
-                5_000     // buffer to resume after rebuffer: 5s
+                30_000,   // min buffer: 30s
+                120_000,  // max buffer: 2 min
+                5_000,    // buffer to start: 5s
+                10_000    // buffer to resume: 10s
             )
             .build()
 
@@ -380,6 +380,15 @@ class PlayerActivity : AppCompatActivity() {
             .build()
             .also { exo ->
                 binding.playerView.player = exo
+
+                // Always prefer highest quality (HD)
+                exo.trackSelectionParameters = exo.trackSelectionParameters
+                    .buildUpon()
+                    .setMaxVideoSize(Int.MAX_VALUE, Int.MAX_VALUE)  // no size limit
+                    .setMaxVideoBitrate(Int.MAX_VALUE)              // no bitrate limit
+                    .setForceHighestSupportedBitrate(true)          // always HD
+                    .build()
+
                 exo.setMediaItem(MediaItem.fromUri(url))
                 exo.prepare()
                 exo.playWhenReady = true
