@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="32dp"
+    android:background="@color/colorBackground">
+
+    <!-- Lock icon -->
+    <TextView
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:gravity="center"
+        android:text="🔒"
+        android:textSize="48sp"
+        android:layout_marginBottom="24dp" />
+
+    <!-- App name -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/app_name"
+        android:textColor="@color/colorOrange"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Error title -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="IP Not Permitted"
+        android:textColor="@android:color/white"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Error message -->
+    <TextView
+        android:id="@+id/tvMessage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="আপনার IP address এই app ব্যবহারের অনুমতি নেই।\nঅনুগ্রহ করে অনুমোদিত নেটওয়ার্ক থেকে connect করুন।"
+        android:textColor="@color/colorSubText"
+        android:textSize="14sp"
+        android:gravity="center"
+        android:lineSpacingMultiplier="1.4"
+        android:layout_marginBottom="32dp" />
+
+    <!-- Current IP display -->
+    <TextView
+        android:id="@+id/tvCurrentIp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Your IP: checking..."
+        android:textColor="@color/colorSubText"
+        android:textSize="13sp"
+        android:layout_marginBottom="32dp"
+        android:background="@color/colorSurface"
+        android:padding="8dp" />
+
+    <!-- Retry button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnRetry"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Retry"
+        android:textAllCaps="false"
+        android:paddingHorizontal="32dp"
+        android:backgroundTint="@color/colorOrange" />
+
+    <!-- Loading -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:indeterminateTint="@color/colorOrange"
+        android:visibility="gone" />
+
+</LinearLayout>

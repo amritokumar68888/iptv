@@ -4,21 +4,26 @@ import android.app.Dialog
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.view.View
 import android.view.Window
 import android.widget.Button
+import android.widget.ProgressBar
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import com.google.android.material.button.MaterialButton
 import com.iptvplayer.app.R
 import com.iptvplayer.app.databinding.ActivityMainBinding
 import com.iptvplayer.app.ui.channels.ChannelListActivity
 import com.iptvplayer.app.ui.channels.RecentManager
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var prefs: SharedPreferences
 
-    // Hard-coded M3U URL — can be changed here
-    private val m3uUrl = "https://raw.githubusercontent.com/amritokumar68888/iptvm3u/main/amrito.m3u"
+    private val m3uUrl = "asset://amrito.m3u"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,14 +32,44 @@ class MainActivity : AppCompatActivity() {
 
         prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
 
+        // IP check করে তারপর UI setup করব
+        checkIpAndInit()
+    }
+
+    // ── IP Verification ───────────────────────────────────────────────────────
+
+    private fun checkIpAndInit() {
+        // Show loading state
+        binding.rowAllChannels.isEnabled  = false
+        binding.rowRecentWatch.isEnabled  = false
+
+        lifecycleScope.launch {
+            val allowed = IpChecker.isAllowed()
+            if (allowed) {
+                // ✅ IP allowed — setup normal UI
+                setupUi()
+            } else {
+                // ❌ IP blocked — show block screen
+                val ip = IpChecker.getPublicIp() ?: "Unknown"
+                showIpBlockedDialog(ip)
+            }
+        }
+    }
+
+    // ── Normal UI Setup ───────────────────────────────────────────────────────
+
+    private fun setupUi() {
+        binding.rowAllChannels.isEnabled  = true
+        binding.rowRecentWatch.isEnabled  = true
+
         updateCounts()
 
         binding.rowAllChannels.setOnClickListener {
             startActivity(
                 Intent(this, ChannelListActivity::class.java).apply {
-                    putExtra(ChannelListActivity.EXTRA_TITLE, getString(R.string.all_channels))
+                    putExtra(ChannelListActivity.EXTRA_TITLE,   getString(R.string.all_channels))
                     putExtra(ChannelListActivity.EXTRA_M3U_URL, m3uUrl)
-                    putExtra(ChannelListActivity.EXTRA_MODE, ChannelListActivity.MODE_ALL)
+                    putExtra(ChannelListActivity.EXTRA_MODE,    ChannelListActivity.MODE_ALL)
                 }
             )
         }
@@ -44,13 +79,54 @@ class MainActivity : AppCompatActivity() {
             if (recent.isEmpty()) return@setOnClickListener
             startActivity(
                 Intent(this, ChannelListActivity::class.java).apply {
-                    putExtra(ChannelListActivity.EXTRA_TITLE, getString(R.string.recent_watch))
+                    putExtra(ChannelListActivity.EXTRA_TITLE,   getString(R.string.recent_watch))
                     putExtra(ChannelListActivity.EXTRA_M3U_URL, m3uUrl)
-                    putExtra(ChannelListActivity.EXTRA_MODE, ChannelListActivity.MODE_RECENT)
+                    putExtra(ChannelListActivity.EXTRA_MODE,    ChannelListActivity.MODE_RECENT)
                 }
             )
         }
     }
+
+    // ── IP Blocked Dialog ─────────────────────────────────────────────────────
+
+    private fun showIpBlockedDialog(currentIp: String) {
+        val dialog = Dialog(this)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.activity_ip_blocked)
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.setCancelable(false)
+
+        // Set current IP
+        dialog.findViewById<TextView>(R.id.tvCurrentIp).text = "Your IP: $currentIp"
+
+        val progressBar = dialog.findViewById<ProgressBar>(R.id.progressBar)
+        val btnRetry    = dialog.findViewById<MaterialButton>(R.id.btnRetry)
+
+        btnRetry.setOnClickListener {
+            progressBar.visibility = View.VISIBLE
+            btnRetry.isEnabled = false
+
+            lifecycleScope.launch {
+                val allowed = IpChecker.isAllowed()
+                val ip      = IpChecker.getPublicIp() ?: "Unknown"
+                progressBar.visibility = View.GONE
+                btnRetry.isEnabled = true
+
+                if (allowed) {
+                    dialog.dismiss()
+                    setupUi()
+                } else {
+                    dialog.findViewById<TextView>(R.id.tvCurrentIp).text = "Your IP: $ip"
+                    dialog.findViewById<TextView>(R.id.tvMessage).text =
+                        "এই IP থেকে access permitted নয়।\nAllowed IP: ${IpChecker.ALLOWED_IP}"
+                }
+            }
+        }
+
+        dialog.show()
+    }
+
+    // ── Counts ────────────────────────────────────────────────────────────────
 
     override fun onResume() {
         super.onResume()
@@ -58,11 +134,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateCounts() {
-        // Channel count will be shown after first load; start at 0 until cached
         val savedCount = prefs.getInt("channel_count", 0)
         if (savedCount > 0) binding.tvAllCount.text = savedCount.toString()
         binding.tvRecentCount.text = RecentManager.count(this).toString()
     }
+
+    // ── Back / Exit ───────────────────────────────────────────────────────────
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {

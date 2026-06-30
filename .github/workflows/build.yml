@@ -32,12 +32,39 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace
+      - name: Generate Keystore (auto)
+        run: |
+          keytool -genkey -v \
+            -keystore skyott.jks \
+            -alias skyott \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass skyott123 \
+            -keypass skyott123 \
+            -dname "CN=Sky OTT, OU=App, O=SkyOTT, L=Dhaka, ST=Dhaka, C=BD"
 
-      - name: Upload APK
+      - name: Build Release APK
+        run: ./gradlew assembleRelease --stacktrace
+
+      - name: Sign APK
+        run: |
+          jarsigner -verbose \
+            -sigalg SHA256withRSA \
+            -digestalg SHA-256 \
+            -keystore skyott.jks \
+            -storepass skyott123 \
+            -keypass skyott123 \
+            app/build/outputs/apk/release/app-release-unsigned.apk \
+            skyott
+          
+          $ANDROID_HOME/build-tools/34.0.0/zipalign -v 4 \
+            app/build/outputs/apk/release/app-release-unsigned.apk \
+            app/build/outputs/apk/release/SkyOTT-signed.apk
+
+      - name: Upload Signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: IPTVPlayer-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 7
+          name: SkyOTT-release-signed
+          path: app/build/outputs/apk/release/SkyOTT-signed.apk
+          retention-days: 30

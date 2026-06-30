@@ -30,7 +30,7 @@
             android:name=".ui.player.PlayerActivity"
             android:exported="false"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
-            android:screenOrientation="landscape"
+            android:screenOrientation="sensor"
             android:supportsPictureInPicture="true"
             android:theme="@style/Theme.IPTVPlayer.Player" />
 

@@ -36,7 +36,6 @@
             android:textSize="18sp"
             android:textStyle="bold" />
 
-        <!-- Dropdown arrow next to title -->
         <ImageView
             android:id="@+id/ivDropdown"
             android:layout_width="20dp"
@@ -71,6 +70,49 @@
             android:src="@drawable/ic_sort"
             android:tint="@color/colorChannelName"
             android:contentDescription="Sort" />
+
+    </LinearLayout>
+
+    <!-- Search bar (hidden by default) -->
+    <LinearLayout
+        android:id="@+id/searchBar"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="12dp"
+        android:background="@color/colorSurface"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/ic_search"
+            android:tint="@color/colorSubText"
+            android:layout_marginEnd="8dp" />
+
+        <EditText
+            android:id="@+id/etSearch"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@android:color/transparent"
+            android:hint="@string/search_hint"
+            android:textColor="@color/colorChannelName"
+            android:textColorHint="@color/colorSubText"
+            android:textSize="15sp"
+            android:inputType="text"
+            android:imeOptions="actionSearch"
+            android:maxLines="1" />
+
+        <ImageButton
+            android:id="@+id/btnClearSearch"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_delete"
+            android:tint="@color/colorSubText"
+            android:contentDescription="Clear" />
 
     </LinearLayout>
 

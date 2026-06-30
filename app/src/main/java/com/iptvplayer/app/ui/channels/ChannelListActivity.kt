@@ -2,7 +2,11 @@ package com.iptvplayer.app.ui.channels
 
 import android.content.Intent
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.View
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -28,12 +32,15 @@ class ChannelListActivity : AppCompatActivity() {
         const val MODE_ALL      = "all"
         const val MODE_RECENT   = "recent"
         const val EXTRA_MODE    = "mode"
+        const val ASSET_PREFIX  = "asset://"
     }
 
     private lateinit var binding: ActivityChannelListBinding
 
-    private var isGridView = false
-    private var channelList: List<Channel> = emptyList()
+    private var isGridView      = false
+    private var isSearchVisible = false
+    private var allChannels: List<Channel> = emptyList()   // full list
+    private var channelList: List<Channel> = emptyList()   // currently shown
 
     private lateinit var listAdapter: ChannelListAdapter
     private lateinit var gridAdapter: ChannelGridAdapter
@@ -60,13 +67,74 @@ class ChannelListActivity : AppCompatActivity() {
 
         setListView()
 
+        // Toggle grid/list
         binding.btnToggleView.setOnClickListener {
             isGridView = !isGridView
             if (isGridView) setGridView() else setListView()
         }
 
+        // Search button toggle
+        binding.btnSearch.setOnClickListener {
+            isSearchVisible = !isSearchVisible
+            if (isSearchVisible) {
+                binding.searchBar.visibility = View.VISIBLE
+                binding.etSearch.requestFocus()
+                val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+                imm.showSoftInput(binding.etSearch, InputMethodManager.SHOW_IMPLICIT)
+            } else {
+                closeSearch()
+            }
+        }
+
+        // Clear search
+        binding.btnClearSearch.setOnClickListener {
+            binding.etSearch.text.clear()
+        }
+
+        // Search text watcher — live filter
+        binding.etSearch.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                filterChannels(s?.toString() ?: "")
+            }
+        })
+
+        // Search keyboard action
+        binding.etSearch.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+                imm.hideSoftInputFromWindow(binding.etSearch.windowToken, 0)
+                true
+            } else false
+        }
+
         if (m3uUrl.isNotEmpty()) {
             loadChannels(m3uUrl, mode)
+        }
+    }
+
+    private fun closeSearch() {
+        isSearchVisible = false
+        binding.searchBar.visibility = View.GONE
+        binding.etSearch.text.clear()
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(binding.etSearch.windowToken, 0)
+        showChannels(channelList)
+    }
+
+    private fun filterChannels(query: String) {
+        val filtered = if (query.isEmpty()) {
+            allChannels
+        } else {
+            allChannels.filter { it.name.contains(query, ignoreCase = true) }
+        }
+        channelList = filtered
+        showChannels(filtered)
+        if (filtered.isEmpty() && query.isNotEmpty()) {
+            binding.tvEmpty.visibility = View.VISIBLE
+            binding.tvEmpty.text = "\"$query\" পাওয়া যায়নি"
+            binding.recyclerChannels.visibility = View.GONE
         }
     }
 
@@ -84,68 +152,94 @@ class ChannelListActivity : AppCompatActivity() {
         if (channelList.isNotEmpty()) gridAdapter.submitList(channelList)
     }
 
+    private fun showChannels(list: List<Channel>) {
+        if (list.isEmpty()) {
+            binding.tvEmpty.visibility = View.VISIBLE
+            binding.recyclerChannels.visibility = View.GONE
+        } else {
+            binding.tvEmpty.visibility = View.GONE
+            binding.recyclerChannels.visibility = View.VISIBLE
+            if (isGridView) gridAdapter.submitList(list)
+            else listAdapter.submitList(list)
+        }
+    }
+
     private fun loadChannels(url: String, mode: String) {
-        binding.progressBar.visibility    = View.VISIBLE
+        binding.progressBar.visibility      = View.VISIBLE
         binding.recyclerChannels.visibility = View.GONE
-        binding.tvEmpty.visibility         = View.GONE
+        binding.tvEmpty.visibility          = View.GONE
 
         lifecycleScope.launch {
             try {
                 val content = withContext(Dispatchers.IO) {
-                    val request = Request.Builder().url(url).build()
-                    client.newCall(request).execute().use { response ->
-                        if (!response.isSuccessful) throw Exception("HTTP ${response.code}")
-                        response.body?.string() ?: throw Exception("Empty response")
+                    if (url.startsWith(ASSET_PREFIX)) {
+                        val fileName = url.removePrefix(ASSET_PREFIX)
+                        assets.open(fileName).bufferedReader().use { it.readText() }
+                    } else {
+                        val request = Request.Builder().url(url).build()
+                        client.newCall(request).execute().use { response ->
+                            if (!response.isSuccessful) throw Exception("HTTP ${response.code}")
+                            response.body?.string() ?: throw Exception("Empty response")
+                        }
                     }
                 }
 
-                val allChannels = withContext(Dispatchers.Default) {
+                val parsed = withContext(Dispatchers.Default) {
                     M3uParser.parse(content, 1L)
                 }
 
-                // Save total count to SharedPrefs for home screen display
                 if (mode == MODE_ALL) {
                     getSharedPreferences("app_prefs", MODE_PRIVATE)
-                        .edit().putInt("channel_count", allChannels.size).apply()
+                        .edit().putInt("channel_count", parsed.size).apply()
                 }
 
-                channelList = when (mode) {
+                allChannels = when (mode) {
                     MODE_RECENT -> {
                         val recent = RecentManager.get(this@ChannelListActivity)
-                        if (recent.isEmpty()) allChannels.takeLast(14) else recent
+                        if (recent.isEmpty()) parsed.takeLast(14) else recent
                     }
-                    else -> allChannels
+                    else -> parsed
                 }
+                channelList = allChannels
 
                 binding.progressBar.visibility = View.GONE
+                showChannels(channelList)
 
-                if (channelList.isEmpty()) {
-                    binding.tvEmpty.visibility = View.VISIBLE
-                } else {
-                    binding.recyclerChannels.visibility = View.VISIBLE
-                    if (isGridView) gridAdapter.submitList(channelList)
-                    else listAdapter.submitList(channelList)
-                }
             } catch (e: Exception) {
                 binding.progressBar.visibility = View.GONE
-                binding.tvEmpty.visibility = View.VISIBLE
-                Toast.makeText(this@ChannelListActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+                binding.tvEmpty.visibility     = View.VISIBLE
+                Toast.makeText(
+                    this@ChannelListActivity,
+                    "Error: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
     }
 
     private fun openPlayer(channel: Channel) {
         RecentManager.add(this, channel)
-
         startActivity(Intent(this, PlayerActivity::class.java).apply {
             putExtra(PlayerActivity.EXTRA_CHANNEL_NAME,  channel.name)
             putExtra(PlayerActivity.EXTRA_CHANNEL_URL,   channel.url)
             putExtra(PlayerActivity.EXTRA_CHANNEL_LOGO,  channel.logoUrl)
             putExtra(PlayerActivity.EXTRA_CHANNEL_INDEX, channelList.indexOf(channel))
-            putStringArrayListExtra(PlayerActivity.EXTRA_CHANNEL_LIST_NAMES,
-                ArrayList(channelList.map { it.name }))
-            putStringArrayListExtra(PlayerActivity.EXTRA_CHANNEL_LIST_URLS,
-                ArrayList(channelList.map { it.url }))
+            putStringArrayListExtra(
+                PlayerActivity.EXTRA_CHANNEL_LIST_NAMES,
+                ArrayList(channelList.map { it.name })
+            )
+            putStringArrayListExtra(
+                PlayerActivity.EXTRA_CHANNEL_LIST_URLS,
+                ArrayList(channelList.map { it.url })
+            )
         })
+    }
+
+    override fun onBackPressed() {
+        if (isSearchVisible) {
+            closeSearch()
+        } else {
+            super.onBackPressed()
+        }
     }
 }
