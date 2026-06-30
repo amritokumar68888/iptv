@@ -276,15 +276,18 @@ class ChannelListActivity : AppCompatActivity() {
     // ── dispatchKeyEvent: ENTER কে DPAD_CENTER হিসেবে treat করো ─────────────
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // ENTER → DPAD_CENTER
         if (event.keyCode == KeyEvent.KEYCODE_ENTER) {
-            val newEvent = KeyEvent(
-                event.downTime, event.eventTime,
-                event.action, KeyEvent.KEYCODE_DPAD_CENTER,
-                event.repeatCount, event.metaState
-            )
-            return super.dispatchKeyEvent(newEvent)
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                return onKeyDown(KeyEvent.KEYCODE_DPAD_CENTER, event)
+            }
+            return true
         }
-        return super.dispatchKeyEvent(event)
+        // সব key Activity-তে handle করব
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            return onKeyDown(event.keyCode, event)
+        }
+        return true
     }
 
     // ── TV Remote Key Handling ────────────────────────────────────────────────
