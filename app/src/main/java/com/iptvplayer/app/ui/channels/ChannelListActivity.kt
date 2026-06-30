@@ -40,6 +40,7 @@ class ChannelListActivity : AppCompatActivity() {
 
     private var isGridView      = false
     private var isSearchVisible = false
+    private var isSortedAsc     = true
     private var allChannels: List<Channel> = emptyList()
     private var channelList: List<Channel> = emptyList()
     private var focusedIndex    = 0   // currently focused channel index for remote
@@ -73,6 +74,29 @@ class ChannelListActivity : AppCompatActivity() {
         binding.btnToggleView.setOnClickListener {
             isGridView = !isGridView
             if (isGridView) setGridView() else setListView()
+        }
+
+        // Dropdown → same as toggle view
+        binding.ivDropdown.setOnClickListener {
+            isGridView = !isGridView
+            if (isGridView) setGridView() else setListView()
+        }
+
+        // Sort button → sort by name A-Z / Z-A toggle
+        binding.btnSortList.setOnClickListener {
+            isSortedAsc = !isSortedAsc
+            val sorted = if (isSortedAsc)
+                channelList.sortedBy { it.name.uppercase() }
+            else
+                channelList.sortedByDescending { it.name.uppercase() }
+            channelList = sorted
+            allChannels = sorted
+            showChannels(channelList)
+            Toast.makeText(
+                this,
+                if (isSortedAsc) "A → Z" else "Z → A",
+                Toast.LENGTH_SHORT
+            ).show()
         }
 
         // Search button toggle
