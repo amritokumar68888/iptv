@@ -29,69 +29,19 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
 
-        // Step 1: IP check
-        checkIpAndInit()
+        // Setup UI immediately — don't block on IP check
+        setupUi()
+
+        // IP check in background
+        checkIpInBackground()
+
+        // Google Drive update in background
+        checkForUpdate()
     }
 
-    // ── IP Check ──────────────────────────────────────────────────────────────
-
-    private fun checkIpAndInit() {
-        binding.rowAllChannels.isEnabled  = false
-        binding.rowRecentWatch.isEnabled  = false
-
-        lifecycleScope.launch {
-            val allowed = IpChecker.isAllowed()
-            if (allowed) {
-                setupUi()
-                // Step 2: Google Drive update (background)
-                checkForUpdate()
-            } else {
-                val ip = IpChecker.getPublicIp() ?: "Unknown"
-                showIpBlockedDialog(ip)
-            }
-        }
-    }
-
-    // ── Google Drive Update ───────────────────────────────────────────────────
-
-    private fun checkForUpdate() {
-        lifecycleScope.launch {
-            // Show updating indicator
-            binding.tvUpdateStatus.visibility = View.VISIBLE
-            binding.tvUpdateStatus.text = "⏳ Updating playlist..."
-
-            val result = M3uUpdater.updateFromDrive(this@MainActivity)
-
-            if (result.isSuccess) {
-                val count = result.getOrNull() ?: 0
-                binding.tvUpdateStatus.text = "✅ Updated! $count channels"
-                // Update count display
-                binding.tvAllCount.text = count.toString()
-                prefs.edit().putInt("channel_count", count).apply()
-                // Hide after 3 seconds
-                binding.tvUpdateStatus.postDelayed({
-                    binding.tvUpdateStatus.visibility = View.GONE
-                }, 3000)
-            } else {
-                val err = result.exceptionOrNull()?.message ?: "Unknown error"
-                if (err.contains("File ID set করা হয়নি")) {
-                    // Drive not configured — silent, use asset file
-                    binding.tvUpdateStatus.visibility = View.GONE
-                } else {
-                    binding.tvUpdateStatus.text = "⚠️ Update failed: $err"
-                    binding.tvUpdateStatus.postDelayed({
-                        binding.tvUpdateStatus.visibility = View.GONE
-                    }, 4000)
-                }
-            }
-        }
-    }
-
-    // ── Normal UI Setup ───────────────────────────────────────────────────────
+    // ── UI Setup (always runs first) ──────────────────────────────────────────
 
     private fun setupUi() {
-        binding.rowAllChannels.isEnabled  = true
-        binding.rowRecentWatch.isEnabled  = true
         updateCounts()
 
         binding.rowAllChannels.setOnClickListener {
@@ -104,13 +54,47 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.rowRecentWatch.setOnClickListener {
-            if (RecentManager.get(this).isEmpty()) return@setOnClickListener
             val url = M3uUpdater.getM3uSource(this)
             startActivity(Intent(this, ChannelListActivity::class.java).apply {
                 putExtra(ChannelListActivity.EXTRA_TITLE,   getString(R.string.recent_watch))
                 putExtra(ChannelListActivity.EXTRA_M3U_URL, url)
                 putExtra(ChannelListActivity.EXTRA_MODE,    ChannelListActivity.MODE_RECENT)
             })
+        }
+    }
+
+    // ── IP Check (background, non-blocking) ───────────────────────────────────
+
+    private fun checkIpInBackground() {
+        lifecycleScope.launch {
+            val allowed = IpChecker.isAllowed()
+            if (!allowed) {
+                val ip = IpChecker.getPublicIp() ?: "Unknown"
+                showIpBlockedDialog(ip)
+            }
+        }
+    }
+
+    // ── Google Drive Update ───────────────────────────────────────────────────
+
+    private fun checkForUpdate() {
+        lifecycleScope.launch {
+            binding.tvUpdateStatus.visibility = View.VISIBLE
+            binding.tvUpdateStatus.text = "⏳ Updating playlist..."
+
+            val result = M3uUpdater.updateFromDrive(this@MainActivity)
+
+            if (result.isSuccess) {
+                val count = result.getOrNull() ?: 0
+                binding.tvUpdateStatus.text = "✅ Updated! $count channels"
+                binding.tvAllCount.text = count.toString()
+                prefs.edit().putInt("channel_count", count).apply()
+                binding.tvUpdateStatus.postDelayed({
+                    binding.tvUpdateStatus.visibility = View.GONE
+                }, 3000)
+            } else {
+                binding.tvUpdateStatus.visibility = View.GONE
+            }
         }
     }
 
@@ -123,6 +107,12 @@ class MainActivity : AppCompatActivity() {
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
         dialog.setCancelable(false)
         dialog.findViewById<TextView>(R.id.tvCurrentIp).text = "Your IP: $currentIp"
+
+        // Block UI
+        binding.rowAllChannels.isClickable = false
+        binding.rowRecentWatch.isClickable = false
+        binding.rowAllChannels.alpha = 0.4f
+        binding.rowRecentWatch.alpha = 0.4f
 
         val progressBar = dialog.findViewById<ProgressBar>(R.id.progressBar)
         val btnRetry    = dialog.findViewById<MaterialButton>(R.id.btnRetry)
@@ -137,8 +127,11 @@ class MainActivity : AppCompatActivity() {
                 btnRetry.isEnabled = true
                 if (allowed) {
                     dialog.dismiss()
-                    setupUi()
-                    checkForUpdate()
+                    // Restore UI
+                    binding.rowAllChannels.isClickable = true
+                    binding.rowRecentWatch.isClickable = true
+                    binding.rowAllChannels.alpha = 1f
+                    binding.rowRecentWatch.alpha = 1f
                 } else {
                     dialog.findViewById<TextView>(R.id.tvCurrentIp).text = "Your IP: $ip"
                     dialog.findViewById<TextView>(R.id.tvMessage).text =

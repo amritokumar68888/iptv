@@ -15,22 +15,11 @@ class ChannelListAdapter(
     private val onClick: (Channel) -> Unit
 ) : ListAdapter<Channel, ChannelListAdapter.ViewHolder>(Diff()) {
 
-    /** The URL of the currently playing channel (highlights it in red) */
     var selectedUrl: String = ""
         set(value) {
             field = value
             notifyDataSetChanged()
         }
-
-    /** Remote-focused item index (orange highlight) */
-    private var focusedIndex: Int = -1
-
-    fun setFocused(index: Int) {
-        val old = focusedIndex
-        focusedIndex = index
-        if (old >= 0) notifyItemChanged(old)
-        notifyItemChanged(focusedIndex)
-    }
 
     inner class ViewHolder(private val b: ItemChannelListBinding) :
         RecyclerView.ViewHolder(b.root) {
@@ -39,16 +28,14 @@ class ChannelListAdapter(
             b.tvNumber.text = (position + 1).toString()
             b.tvChannelName.text = channel.name
 
-            // Highlight: playing = dark red, focused by remote = orange, normal = transparent
-            when {
-                position == focusedIndex ->
-                    b.root.setBackgroundColor(Color.parseColor("#CC6600"))  // orange
-                channel.url == selectedUrl ->
-                    b.root.setBackgroundColor(Color.parseColor("#8B0000"))  // dark red
-                else ->
-                    b.root.setBackgroundColor(Color.TRANSPARENT)
+            // Highlight currently playing channel
+            if (channel.url == selectedUrl) {
+                b.root.setBackgroundColor(Color.parseColor("#8B0000"))
+            } else {
+                b.root.setBackgroundColor(Color.TRANSPARENT)
             }
 
+            // Logo
             if (channel.logoUrl.isNotEmpty()) {
                 Glide.with(b.root.context)
                     .load(channel.logoUrl)
@@ -61,6 +48,7 @@ class ChannelListAdapter(
                 b.ivLogo.setImageResource(R.drawable.ic_tv)
             }
 
+            // Click handler on root
             b.root.setOnClickListener { onClick(channel) }
         }
     }
