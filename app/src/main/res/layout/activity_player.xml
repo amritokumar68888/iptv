@@ -16,7 +16,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:resize_mode="zoom"
+        app:resize_mode="fit"
         app:use_controller="false"
         android:focusable="false"
         android:focusableInTouchMode="false" />

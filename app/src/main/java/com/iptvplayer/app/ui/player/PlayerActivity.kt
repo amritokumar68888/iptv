@@ -153,13 +153,13 @@ class PlayerActivity : AppCompatActivity() {
 
     // ── Orientation / Fullscreen ──────────────────────────────────────────────
 
-    private var aspectModeIndex = 0  // 0=zoom(full), 1=fit(letterbox), 2=fill(stretch)
+    private var aspectModeIndex = 0  // 0=fit(best quality), 1=zoom(full), 2=fill(stretch)
     private val aspectModes = listOf(
-        androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
         androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT,
+        androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
         androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL
     )
-    private val aspectLabels = listOf("Zoom (Full)", "Fit (Letterbox)", "Stretch")
+    private val aspectLabels = listOf("Fit (Best Quality)", "Zoom (Full Screen)", "Stretch")
 
     private fun cycleAspectMode() {
         aspectModeIndex = (aspectModeIndex + 1) % aspectModes.size
@@ -365,28 +365,41 @@ class PlayerActivity : AppCompatActivity() {
     // ── ExoPlayer ─────────────────────────────────────────────────────────────
 
     private fun initializePlayer(url: String) {
-        player = ExoPlayer.Builder(this).build().also { exo ->
-            binding.playerView.player = exo
-            exo.setMediaItem(MediaItem.fromUri(url))
-            exo.prepare()
-            exo.playWhenReady = true
+        // Better buffering for smooth playback
+        val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
+            .setBufferDurationsMs(
+                15_000,   // min buffer: 15s
+                60_000,   // max buffer: 60s
+                2_500,    // buffer to start playback: 2.5s
+                5_000     // buffer to resume after rebuffer: 5s
+            )
+            .build()
 
-            exo.addListener(object : Player.Listener {
-                override fun onPlaybackStateChanged(state: Int) {
-                    binding.progressBuffering.visibility =
-                        if (state == Player.STATE_BUFFERING) View.VISIBLE else View.GONE
-                    if (state == Player.STATE_READY)
-                        binding.btnPlayPause.setImageResource(R.drawable.ic_pause)
-                }
-                override fun onPlayerError(error: PlaybackException) {
-                    binding.progressBuffering.visibility = View.GONE
-                    binding.tvError.visibility = View.VISIBLE
-                    binding.tvError.text = getString(R.string.error_playback, error.message)
-                    showControls()
-                    hideHandler.removeCallbacks(hideRunnable)
-                }
-            })
-        }
+        player = ExoPlayer.Builder(this)
+            .setLoadControl(loadControl)
+            .build()
+            .also { exo ->
+                binding.playerView.player = exo
+                exo.setMediaItem(MediaItem.fromUri(url))
+                exo.prepare()
+                exo.playWhenReady = true
+
+                exo.addListener(object : Player.Listener {
+                    override fun onPlaybackStateChanged(state: Int) {
+                        binding.progressBuffering.visibility =
+                            if (state == Player.STATE_BUFFERING) View.VISIBLE else View.GONE
+                        if (state == Player.STATE_READY)
+                            binding.btnPlayPause.setImageResource(R.drawable.ic_pause)
+                    }
+                    override fun onPlayerError(error: PlaybackException) {
+                        binding.progressBuffering.visibility = View.GONE
+                        binding.tvError.visibility = View.VISIBLE
+                        binding.tvError.text = getString(R.string.error_playback, error.message)
+                        showControls()
+                        hideHandler.removeCallbacks(hideRunnable)
+                    }
+                })
+            }
     }
 
     // ── dispatchKeyEvent: ENTER কে DPAD_CENTER হিসেবে treat করো ─────────────
