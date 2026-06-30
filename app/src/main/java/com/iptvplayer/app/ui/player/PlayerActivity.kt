@@ -45,6 +45,7 @@ class PlayerActivity : AppCompatActivity() {
     private var isLandscape = true
 
     private lateinit var overlayAdapter: ChannelListAdapter
+    private var overlayFocusedIndex = 0  // currently highlighted item in overlay list
 
     private val hideHandler = Handler(Looper.getMainLooper())
     private val hideRunnable = Runnable { hideControls() }
@@ -347,7 +348,10 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun showChannelList() {
         binding.channelListOverlay.visibility = View.VISIBLE
-        if (currentIndex >= 0) binding.recyclerChannelList.scrollToPosition(currentIndex)
+        // overlay খোলার সময় current playing channel-এ focus দাও
+        overlayFocusedIndex = if (currentIndex >= 0) currentIndex else 0
+        overlayAdapter.setFocused(overlayFocusedIndex)
+        binding.recyclerChannelList.scrollToPosition(overlayFocusedIndex)
         hideHandler.removeCallbacks(hideRunnable)
     }
 
@@ -380,6 +384,21 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
+    // ── dispatchKeyEvent: ENTER কে DPAD_CENTER হিসেবে treat করো ─────────────
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // TV remote-এ ENTER key Android back হিসেবে কাজ করে — এটা আটকাও
+        if (event.keyCode == KeyEvent.KEYCODE_ENTER) {
+            val newEvent = KeyEvent(
+                event.downTime, event.eventTime,
+                event.action, KeyEvent.KEYCODE_DPAD_CENTER,
+                event.repeatCount, event.metaState
+            )
+            return super.dispatchKeyEvent(newEvent)
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
     // ── Keys ──────────────────────────────────────────────────────────────────
 
     // Bottom bar button IDs in order for remote navigation
@@ -400,14 +419,14 @@ class PlayerActivity : AppCompatActivity() {
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         return when (keyCode) {
 
-            // ── OK / Enter → menu open OR focused button click ────────────────
+            // ── OK / Enter → menu open OR focused button click OR play channel ─
             KeyEvent.KEYCODE_DPAD_CENTER,
-            KeyEvent.KEYCODE_ENTER,
             KeyEvent.KEYCODE_BUTTON_A -> {
                 when {
-                    // Channel overlay খোলা → close
+                    // Channel overlay খোলা → focused channel play করো
                     binding.channelListOverlay.visibility == View.VISIBLE -> {
                         hideChannelList()
+                        switchToChannel(overlayFocusedIndex)
                     }
                     // Controls দেখা আছে → focused button click
                     binding.bottomBar.visibility == View.VISIBLE -> {
@@ -431,10 +450,12 @@ class PlayerActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_CHANNEL_UP,
             KeyEvent.KEYCODE_PAGE_UP -> {
                 if (binding.channelListOverlay.visibility == View.VISIBLE) {
-                    val lm = binding.recyclerChannelList.layoutManager
-                            as? androidx.recyclerview.widget.LinearLayoutManager
-                    val pos = (lm?.findFirstVisibleItemPosition() ?: 1) - 1
-                    if (pos >= 0) binding.recyclerChannelList.smoothScrollToPosition(pos)
+                    // overlay খোলা → list-এ উপরে যাও
+                    if (overlayFocusedIndex > 0) {
+                        overlayFocusedIndex--
+                        overlayAdapter.setFocused(overlayFocusedIndex)
+                        binding.recyclerChannelList.scrollToPosition(overlayFocusedIndex)
+                    }
                 } else {
                     navigateChannel(-1)
                 }
@@ -446,10 +467,12 @@ class PlayerActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_CHANNEL_DOWN,
             KeyEvent.KEYCODE_PAGE_DOWN -> {
                 if (binding.channelListOverlay.visibility == View.VISIBLE) {
-                    val lm = binding.recyclerChannelList.layoutManager
-                            as? androidx.recyclerview.widget.LinearLayoutManager
-                    val pos = (lm?.findLastVisibleItemPosition() ?: 0) + 1
-                    if (pos < channelList.size) binding.recyclerChannelList.smoothScrollToPosition(pos)
+                    // overlay খোলা → list-এ নিচে যাও
+                    if (overlayFocusedIndex < channelList.size - 1) {
+                        overlayFocusedIndex++
+                        overlayAdapter.setFocused(overlayFocusedIndex)
+                        binding.recyclerChannelList.scrollToPosition(overlayFocusedIndex)
+                    }
                 } else {
                     navigateChannel(+1)
                 }
