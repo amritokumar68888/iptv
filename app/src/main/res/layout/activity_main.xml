@@ -23,7 +23,8 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_menu"
             android:tint="@color/colorChannelName"
-            android:contentDescription="Menu" />
+            android:contentDescription="Menu"
+            android:focusable="true" />
 
         <TextView
             android:layout_width="0dp"
@@ -33,8 +34,7 @@
             android:text="@string/live_tv"
             android:textColor="@color/colorChannelName"
             android:textSize="20sp"
-            android:textStyle="bold"
-            android:fontFamily="sans-serif-medium" />
+            android:textStyle="bold" />
 
         <ImageButton
             android:id="@+id/btnSearch"
@@ -43,7 +43,8 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_search"
             android:tint="@color/colorChannelName"
-            android:contentDescription="Search" />
+            android:contentDescription="Search"
+            android:focusable="true" />
 
         <ImageButton
             android:id="@+id/btnSort"
@@ -52,7 +53,8 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_sort"
             android:tint="@color/colorChannelName"
-            android:contentDescription="Sort" />
+            android:contentDescription="Sort"
+            android:focusable="true" />
 
     </LinearLayout>
 
@@ -62,15 +64,25 @@
         android:layout_height="1dp"
         android:background="@color/colorDivider" />
 
-    <!-- All Channels row -->
+    <!-- All Channels row — TV focusable -->
     <LinearLayout
         android:id="@+id/rowAllChannels"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
+        android:layout_height="64dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingHorizontal="20dp"
-        android:background="?attr/selectableItemBackground">
+        android:focusable="true"
+        android:focusableInTouchMode="false"
+        android:nextFocusDown="@id/rowRecentWatch"
+        android:background="@drawable/bg_row_selector">
+
+        <ImageView
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:src="@drawable/ic_tv"
+            android:tint="@color/colorOrange"
+            android:layout_marginEnd="12dp" />
 
         <TextView
             android:layout_width="0dp"
@@ -78,7 +90,8 @@
             android:layout_weight="1"
             android:text="@string/all_channels"
             android:textColor="@color/colorChannelName"
-            android:textSize="16sp" />
+            android:textSize="17sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/tvAllCount"
@@ -103,15 +116,25 @@
         android:layout_height="1dp"
         android:background="@color/colorDivider" />
 
-    <!-- Recent Watch row -->
+    <!-- Recent Watch row — TV focusable -->
     <LinearLayout
         android:id="@+id/rowRecentWatch"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
+        android:layout_height="64dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingHorizontal="20dp"
-        android:background="?attr/selectableItemBackground">
+        android:focusable="true"
+        android:focusableInTouchMode="false"
+        android:nextFocusUp="@id/rowAllChannels"
+        android:background="@drawable/bg_row_selector">
+
+        <ImageView
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:src="@drawable/ic_refresh"
+            android:tint="@color/colorOrange"
+            android:layout_marginEnd="12dp" />
 
         <TextView
             android:layout_width="0dp"
@@ -119,7 +142,8 @@
             android:layout_weight="1"
             android:text="@string/recent_watch"
             android:textColor="@color/colorChannelName"
-            android:textSize="16sp" />
+            android:textSize="17sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/tvRecentCount"

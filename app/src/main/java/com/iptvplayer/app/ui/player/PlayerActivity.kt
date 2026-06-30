@@ -50,12 +50,13 @@ class PlayerActivity : AppCompatActivity() {
     private val hideRunnable = Runnable { hideControls() }
 
     companion object {
-        const val EXTRA_CHANNEL_NAME       = "channel_name"
-        const val EXTRA_CHANNEL_URL        = "channel_url"
-        const val EXTRA_CHANNEL_LOGO       = "channel_logo"
-        const val EXTRA_CHANNEL_INDEX      = "channel_index"
-        const val EXTRA_CHANNEL_LIST_NAMES = "channel_list_names"
-        const val EXTRA_CHANNEL_LIST_URLS  = "channel_list_urls"
+        const val EXTRA_CHANNEL_NAME        = "channel_name"
+        const val EXTRA_CHANNEL_URL         = "channel_url"
+        const val EXTRA_CHANNEL_LOGO        = "channel_logo"
+        const val EXTRA_CHANNEL_INDEX       = "channel_index"
+        const val EXTRA_CHANNEL_LIST_NAMES  = "channel_list_names"
+        const val EXTRA_CHANNEL_LIST_URLS   = "channel_list_urls"
+        const val EXTRA_CHANNEL_LIST_LOGOS  = "channel_list_logos"
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -73,10 +74,12 @@ class PlayerActivity : AppCompatActivity() {
         channelUrl   = intent.getStringExtra(EXTRA_CHANNEL_URL)  ?: ""
         currentIndex = intent.getIntExtra(EXTRA_CHANNEL_INDEX, -1)
 
-        val names = intent.getStringArrayListExtra(EXTRA_CHANNEL_LIST_NAMES) ?: arrayListOf()
-        val urls  = intent.getStringArrayListExtra(EXTRA_CHANNEL_LIST_URLS)  ?: arrayListOf()
+        val names  = intent.getStringArrayListExtra(EXTRA_CHANNEL_LIST_NAMES) ?: arrayListOf()
+        val urls   = intent.getStringArrayListExtra(EXTRA_CHANNEL_LIST_URLS)  ?: arrayListOf()
+        val logos  = intent.getStringArrayListExtra(EXTRA_CHANNEL_LIST_LOGOS) ?: arrayListOf()
         channelList = names.zip(urls).mapIndexed { idx, (name, url) ->
-            Channel(id = idx.toLong(), name = name, url = url)
+            Channel(id = idx.toLong(), name = name, url = url,
+                logoUrl = logos.getOrElse(idx) { "" })
         }
 
         binding.tvChannelName.text = "${currentIndex + 1}-$channelName"
@@ -379,16 +382,56 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         return when (keyCode) {
+            // MENU / channel list toggle
             KeyEvent.KEYCODE_MENU -> { toggleChannelList(); true }
-            KeyEvent.KEYCODE_CHANNEL_UP, KeyEvent.KEYCODE_PAGE_UP   -> { navigateChannel(-1); true }
-            KeyEvent.KEYCODE_CHANNEL_DOWN, KeyEvent.KEYCODE_PAGE_DOWN -> { navigateChannel(+1); true }
+
+            // Channel UP — previous channel
+            KeyEvent.KEYCODE_CHANNEL_UP,
+            KeyEvent.KEYCODE_PAGE_UP,
+            KeyEvent.KEYCODE_DPAD_UP -> { navigateChannel(-1); true }
+
+            // Channel DOWN — next channel
+            KeyEvent.KEYCODE_CHANNEL_DOWN,
+            KeyEvent.KEYCODE_PAGE_DOWN,
+            KeyEvent.KEYCODE_DPAD_DOWN -> { navigateChannel(+1); true }
+
+            // OK / Enter / D-pad center → toggle controls or select from list
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_BUTTON_A -> {
+                if (binding.channelListOverlay.visibility == View.VISIBLE) {
+                    // overlay খোলা থাকলে selected channel play করবে
+                    hideChannelList()
+                } else {
+                    toggleControls()
+                }
+                true
+            }
+
+            // D-pad left/right → পূর্ববর্তী/পরবর্তী channel (alternate)
+            KeyEvent.KEYCODE_DPAD_LEFT,
+            KeyEvent.KEYCODE_MEDIA_PREVIOUS -> { navigateChannel(-1); true }
+
+            KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_MEDIA_NEXT -> { navigateChannel(+1); true }
+
+            // Play/Pause
+            KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
+            KeyEvent.KEYCODE_SPACE,
+            KeyEvent.KEYCODE_MEDIA_PLAY,
+            KeyEvent.KEYCODE_MEDIA_PAUSE -> { binding.btnPlayPause.performClick(); true }
+
+            // Volume handled by system
+            KeyEvent.KEYCODE_VOLUME_UP,
+            KeyEvent.KEYCODE_VOLUME_DOWN -> false
+
+            // Back → close overlay or exit player
             KeyEvent.KEYCODE_BACK -> {
-                if (binding.channelListOverlay.visibility == View.VISIBLE) { hideChannelList(); true }
-                else super.onKeyDown(keyCode, event)
+                if (binding.channelListOverlay.visibility == View.VISIBLE) {
+                    hideChannelList(); true
+                } else super.onKeyDown(keyCode, event)
             }
-            KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_SPACE -> {
-                binding.btnPlayPause.performClick(); true
-            }
+
             else -> super.onKeyDown(keyCode, event)
         }
     }

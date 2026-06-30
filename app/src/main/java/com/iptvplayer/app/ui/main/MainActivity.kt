@@ -4,6 +4,7 @@ import android.app.Dialog
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.View
 import android.view.Window
 import android.widget.Button
@@ -144,6 +145,41 @@ class MainActivity : AppCompatActivity() {
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         showExitDialog()
+    }
+
+    // ── TV Remote Key Handling ────────────────────────────────────────────────
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        return when (keyCode) {
+            // OK / Enter / D-pad center → open All Channels
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_BUTTON_A -> {
+                if (binding.rowAllChannels.isFocused || binding.rowAllChannels.hasFocus()) {
+                    binding.rowAllChannels.performClick()
+                } else if (binding.rowRecentWatch.isFocused || binding.rowRecentWatch.hasFocus()) {
+                    binding.rowRecentWatch.performClick()
+                } else {
+                    binding.rowAllChannels.performClick()
+                }
+                true
+            }
+            // D-pad down → focus recent watch
+            KeyEvent.KEYCODE_DPAD_DOWN -> {
+                binding.rowRecentWatch.requestFocus()
+                true
+            }
+            // D-pad up → focus all channels
+            KeyEvent.KEYCODE_DPAD_UP -> {
+                binding.rowAllChannels.requestFocus()
+                true
+            }
+            // Back → exit dialog
+            KeyEvent.KEYCODE_BACK -> {
+                showExitDialog(); true
+            }
+            else -> super.onKeyDown(keyCode, event)
+        }
     }
 
     private fun showExitDialog() {

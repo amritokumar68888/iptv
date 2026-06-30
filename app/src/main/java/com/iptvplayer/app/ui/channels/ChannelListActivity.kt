@@ -232,6 +232,10 @@ class ChannelListActivity : AppCompatActivity() {
                 PlayerActivity.EXTRA_CHANNEL_LIST_URLS,
                 ArrayList(channelList.map { it.url })
             )
+            putStringArrayListExtra(
+                PlayerActivity.EXTRA_CHANNEL_LIST_LOGOS,
+                ArrayList(channelList.map { it.logoUrl })
+            )
         })
     }
 

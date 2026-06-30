@@ -293,40 +293,36 @@
 
     </LinearLayout>
 
-    <!-- Channel list overlay (right panel): categories left + channels right -->
-    <LinearLayout
+    <!-- Channel list overlay — CENTER, পুরো screen ঢেকে দেবে -->
+    <FrameLayout
         android:id="@+id/channelListOverlay"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:orientation="horizontal"
-        android:background="#F0000000"
+        android:background="#E6000000"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toEndOf="parent"
-        app:layout_constraintWidth_percent="0.75">
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
 
-        <!-- Left panel: header + category list -->
         <LinearLayout
-            android:layout_width="120dp"
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:background="#1A1A1A">
+            android:orientation="vertical">
 
-            <!-- Header -->
+            <!-- Header row -->
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
+                android:layout_height="52dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:paddingHorizontal="10dp"
-                android:background="#111111">
+                android:paddingHorizontal="16dp"
+                android:background="#1A1A1A">
 
                 <ImageButton
                     android:id="@+id/btnCloseOverlay"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_arrow_back"
                     android:tint="@android:color/white"
@@ -336,10 +332,10 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:layout_marginStart="6dp"
+                    android:layout_marginStart="10dp"
                     android:text="@string/channel_list"
                     android:textColor="@android:color/white"
-                    android:textSize="13sp"
+                    android:textSize="18sp"
                     android:textStyle="bold" />
 
             </LinearLayout>
@@ -349,33 +345,15 @@
                 android:layout_height="1dp"
                 android:background="@color/colorDivider" />
 
-            <!-- "All Channels" category item (selected = red) -->
-            <TextView
-                android:id="@+id/tvCategoryAll"
+            <!-- Channel list -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerChannelList"
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:gravity="center_vertical"
-                android:paddingHorizontal="10dp"
-                android:text="1  All Channels"
-                android:textColor="@android:color/white"
-                android:textSize="12sp"
-                android:background="@color/colorCardSelected" />
+                android:layout_height="0dp"
+                android:layout_weight="1" />
 
         </LinearLayout>
 
-        <!-- Vertical divider -->
-        <View
-            android:layout_width="1dp"
-            android:layout_height="match_parent"
-            android:background="@color/colorDivider" />
-
-        <!-- Right panel: channel list -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recyclerChannelList"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1" />
-
-    </LinearLayout>
+    </FrameLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
