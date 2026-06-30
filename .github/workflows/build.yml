@@ -52,9 +52,16 @@ jobs:
           KEY_PASS: skyott123
         run: ./gradlew assembleRelease --stacktrace
 
+      - name: Rename APK
+        run: |
+          mv app/build/outputs/apk/release/app-release.apk \
+             app/build/outputs/apk/release/SkyOTT.apk || \
+          mv app/build/outputs/apk/release/app-release-unsigned.apk \
+             app/build/outputs/apk/release/SkyOTT.apk || true
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: SkyOTT-release
-          path: app/build/outputs/apk/release/app-release.apk
+          path: app/build/outputs/apk/release/SkyOTT.apk
           retention-days: 30

@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
@@ -18,12 +17,12 @@ import com.iptvplayer.app.data.model.Channel
 import com.iptvplayer.app.data.parser.M3uParser
 import com.iptvplayer.app.databinding.ActivityChannelListBinding
 import com.iptvplayer.app.ui.player.PlayerActivity
-import com.iptvplayer.app.ui.main.PlaylistUpdater
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.File
 import java.util.concurrent.TimeUnit
 
 class ChannelListActivity : AppCompatActivity() {
@@ -41,10 +40,8 @@ class ChannelListActivity : AppCompatActivity() {
 
     private var isGridView      = false
     private var isSearchVisible = false
-    private var isSortedAsc     = true
     private var allChannels: List<Channel> = emptyList()
     private var channelList: List<Channel> = emptyList()
-    private var focusedIndex    = 0   // currently focused channel index for remote
 
     private lateinit var listAdapter: ChannelListAdapter
     private lateinit var gridAdapter: ChannelGridAdapter
@@ -52,6 +49,7 @@ class ChannelListActivity : AppCompatActivity() {
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
+        .followRedirects(true)
         .build()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -71,36 +69,11 @@ class ChannelListActivity : AppCompatActivity() {
 
         setListView()
 
-        // Toggle grid/list
         binding.btnToggleView.setOnClickListener {
             isGridView = !isGridView
             if (isGridView) setGridView() else setListView()
         }
 
-        // Dropdown → same as toggle view
-        binding.ivDropdown.setOnClickListener {
-            isGridView = !isGridView
-            if (isGridView) setGridView() else setListView()
-        }
-
-        // Sort button → sort by name A-Z / Z-A toggle
-        binding.btnSortList.setOnClickListener {
-            isSortedAsc = !isSortedAsc
-            val sorted = if (isSortedAsc)
-                channelList.sortedBy { it.name.uppercase() }
-            else
-                channelList.sortedByDescending { it.name.uppercase() }
-            channelList = sorted
-            allChannels = sorted
-            showChannels(channelList)
-            Toast.makeText(
-                this,
-                if (isSortedAsc) "A → Z" else "Z → A",
-                Toast.LENGTH_SHORT
-            ).show()
-        }
-
-        // Search button toggle
         binding.btnSearch.setOnClickListener {
             isSearchVisible = !isSearchVisible
             if (isSearchVisible) {
@@ -113,21 +86,14 @@ class ChannelListActivity : AppCompatActivity() {
             }
         }
 
-        // Clear search
-        binding.btnClearSearch.setOnClickListener {
-            binding.etSearch.text.clear()
-        }
+        binding.btnClearSearch.setOnClickListener { binding.etSearch.text.clear() }
 
-        // Search text watcher — live filter
         binding.etSearch.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                filterChannels(s?.toString() ?: "")
-            }
+            override fun afterTextChanged(s: Editable?) { filterChannels(s?.toString() ?: "") }
         })
 
-        // Search keyboard action
         binding.etSearch.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
                 val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
@@ -136,9 +102,7 @@ class ChannelListActivity : AppCompatActivity() {
             } else false
         }
 
-        if (m3uUrl.isNotEmpty()) {
-            loadChannels(m3uUrl, mode)
-        }
+        if (m3uUrl.isNotEmpty()) loadChannels(m3uUrl, mode)
     }
 
     private fun closeSearch() {
@@ -147,21 +111,16 @@ class ChannelListActivity : AppCompatActivity() {
         binding.etSearch.text.clear()
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(binding.etSearch.windowToken, 0)
-        showChannels(channelList)
+        showChannels(allChannels)
     }
 
     private fun filterChannels(query: String) {
-        val filtered = if (query.isEmpty()) {
-            allChannels
-        } else {
-            allChannels.filter { it.name.contains(query, ignoreCase = true) }
-        }
+        val filtered = if (query.isEmpty()) allChannels
+        else allChannels.filter { it.name.contains(query, ignoreCase = true) }
         channelList = filtered
         showChannels(filtered)
         if (filtered.isEmpty() && query.isNotEmpty()) {
-            binding.tvEmpty.visibility = View.VISIBLE
             binding.tvEmpty.text = "\"$query\" পাওয়া যায়নি"
-            binding.recyclerChannels.visibility = View.GONE
         }
     }
 
@@ -199,13 +158,24 @@ class ChannelListActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val content = withContext(Dispatchers.IO) {
-                    if (url.startsWith(ASSET_PREFIX)) {
-                        // Local asset file
-                        val fileName = url.removePrefix(ASSET_PREFIX)
-                        assets.open(fileName).bufferedReader().use { it.readText() }
-                    } else {
-                        // Remote URL — auto-cache and update
-                        PlaylistUpdater.getLatestContent(this@ChannelListActivity, url)
+                    when {
+                        url.startsWith(ASSET_PREFIX) -> {
+                            // Built-in asset file
+                            val fileName = url.removePrefix(ASSET_PREFIX)
+                            assets.open(fileName).bufferedReader().use { it.readText() }
+                        }
+                        url.startsWith("file://") -> {
+                            // Locally cached file (from Google Drive update)
+                            File(url.removePrefix("file://")).readText()
+                        }
+                        else -> {
+                            // Remote URL
+                            val request = Request.Builder().url(url).build()
+                            client.newCall(request).execute().use { response ->
+                                if (!response.isSuccessful) throw Exception("HTTP ${response.code}")
+                                response.body?.string() ?: throw Exception("Empty response")
+                            }
+                        }
                     }
                 }
 
@@ -233,11 +203,7 @@ class ChannelListActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 binding.progressBar.visibility = View.GONE
                 binding.tvEmpty.visibility     = View.VISIBLE
-                Toast.makeText(
-                    this@ChannelListActivity,
-                    "Error: ${e.message}",
-                    Toast.LENGTH_LONG
-                ).show()
+                Toast.makeText(this@ChannelListActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -249,113 +215,12 @@ class ChannelListActivity : AppCompatActivity() {
             putExtra(PlayerActivity.EXTRA_CHANNEL_URL,   channel.url)
             putExtra(PlayerActivity.EXTRA_CHANNEL_LOGO,  channel.logoUrl)
             putExtra(PlayerActivity.EXTRA_CHANNEL_INDEX, channelList.indexOf(channel))
-            putStringArrayListExtra(
-                PlayerActivity.EXTRA_CHANNEL_LIST_NAMES,
-                ArrayList(channelList.map { it.name })
-            )
-            putStringArrayListExtra(
-                PlayerActivity.EXTRA_CHANNEL_LIST_URLS,
-                ArrayList(channelList.map { it.url })
-            )
-            putStringArrayListExtra(
-                PlayerActivity.EXTRA_CHANNEL_LIST_LOGOS,
-                ArrayList(channelList.map { it.logoUrl })
-            )
+            putStringArrayListExtra(PlayerActivity.EXTRA_CHANNEL_LIST_NAMES, ArrayList(channelList.map { it.name }))
+            putStringArrayListExtra(PlayerActivity.EXTRA_CHANNEL_LIST_URLS,  ArrayList(channelList.map { it.url }))
         })
     }
 
     override fun onBackPressed() {
-        if (isSearchVisible) {
-            closeSearch()
-        } else {
-            super.onBackPressed()
-        }
-    }
-
-    // ── dispatchKeyEvent: ENTER কে DPAD_CENTER হিসেবে treat করো ─────────────
-
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        // ENTER → DPAD_CENTER
-        if (event.keyCode == KeyEvent.KEYCODE_ENTER) {
-            if (event.action == KeyEvent.ACTION_DOWN) {
-                return onKeyDown(KeyEvent.KEYCODE_DPAD_CENTER, event)
-            }
-            return true
-        }
-        // সব key Activity-তে handle করব
-        if (event.action == KeyEvent.ACTION_DOWN) {
-            return onKeyDown(event.keyCode, event)
-        }
-        return true
-    }
-
-    // ── TV Remote Key Handling ────────────────────────────────────────────────
-
-    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        return when (keyCode) {
-
-            // OK / Enter → play focused channel
-            KeyEvent.KEYCODE_DPAD_CENTER,
-            KeyEvent.KEYCODE_ENTER,
-            KeyEvent.KEYCODE_BUTTON_A -> {
-                if (channelList.isNotEmpty()) {
-                    openPlayer(channelList[focusedIndex])
-                }
-                true
-            }
-
-            // UP → আগের channel
-            KeyEvent.KEYCODE_DPAD_UP,
-            KeyEvent.KEYCODE_CHANNEL_UP,
-            KeyEvent.KEYCODE_PAGE_UP -> {
-                if (channelList.isNotEmpty()) {
-                    focusedIndex = if (focusedIndex > 0) focusedIndex - 1 else 0
-                    scrollAndHighlight(focusedIndex)
-                }
-                true
-            }
-
-            // DOWN → পরের channel
-            KeyEvent.KEYCODE_DPAD_DOWN,
-            KeyEvent.KEYCODE_CHANNEL_DOWN,
-            KeyEvent.KEYCODE_PAGE_DOWN -> {
-                if (channelList.isNotEmpty()) {
-                    focusedIndex = if (focusedIndex < channelList.size - 1)
-                        focusedIndex + 1 else channelList.size - 1
-                    scrollAndHighlight(focusedIndex)
-                }
-                true
-            }
-
-            // LEFT → grid/list toggle
-            KeyEvent.KEYCODE_DPAD_LEFT -> {
-                if (!isGridView) { /* already list */ } else {
-                    isGridView = false; setListView()
-                }
-                true
-            }
-
-            // RIGHT → grid/list toggle
-            KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                if (isGridView) { /* already grid */ } else {
-                    isGridView = true; setGridView()
-                }
-                true
-            }
-
-            // Back
-            KeyEvent.KEYCODE_BACK -> {
-                if (isSearchVisible) { closeSearch(); true }
-                else super.onKeyDown(keyCode, event)
-            }
-
-            else -> super.onKeyDown(keyCode, event)
-        }
-    }
-
-    private fun scrollAndHighlight(index: Int) {
-        binding.recyclerChannels.scrollToPosition(index)
-        // Update selected highlight in adapter
-        listAdapter.setFocused(index)
+        if (isSearchVisible) closeSearch() else super.onBackPressed()
     }
 }

@@ -168,4 +168,16 @@
         android:layout_height="1dp"
         android:background="@color/colorDivider" />
 
+    <!-- Update status bar -->
+    <TextView
+        android:id="@+id/tvUpdateStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="10dp"
+        android:textColor="@color/colorOrange"
+        android:textSize="13sp"
+        android:gravity="center"
+        android:background="@color/colorSurface"
+        android:visibility="gone" />
+
 </LinearLayout>
