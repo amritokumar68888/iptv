@@ -24,10 +24,17 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var prefs: SharedPreferences
 
-    // ── M3U Source — Google Drive থেকে auto-update হবে ──────────────────────
-    // M3uUpdater.kt-এ DRIVE_URL-এ আপনার Google Drive FILE_ID বসান
-    // Local asset শুধু fallback হিসেবে থাকবে
-    private var m3uUrl = "asset://amrito.m3u"  // default fallback
+    // ── M3U Source ────────────────────────────────────────────────────────────
+    // Google Drive থেকে load করতে:
+    // 1. Drive-এ file upload করুন
+    // 2. Share → Anyone with link → Viewer
+    // 3. Link থেকে FILE_ID নিন: drive.google.com/file/d/FILE_ID/view
+    // 4. নিচের URL-এ FILE_ID বসান
+    //
+    // private val m3uUrl = "https://drive.google.com/uc?export=download&id=FILE_ID"
+    //
+    // Local asset file (default):
+    private val m3uUrl = "asset://amrito.m3u"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,18 +42,6 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
-
-        // Background-এ m3u update check করো
-        lifecycleScope.launch {
-            try {
-                M3uUpdater.checkAndUpdate(applicationContext)
-                // Cache ready → cached URL use করো
-                m3uUrl = "cached://amrito_cache.m3u"
-            } catch (e: Exception) {
-                // Fallback to asset
-                m3uUrl = "asset://amrito.m3u"
-            }
-        }
 
         // IP check করে তারপর UI setup করব
         checkIpAndInit()

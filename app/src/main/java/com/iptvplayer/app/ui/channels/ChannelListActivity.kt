@@ -199,25 +199,13 @@ class ChannelListActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val content = withContext(Dispatchers.IO) {
-                    when {
-                        url.startsWith(ASSET_PREFIX) -> {
-                            // Local asset file
-                            val fileName = url.removePrefix(ASSET_PREFIX)
-                            assets.open(fileName).bufferedReader().use { it.readText() }
-                        }
-                        url.startsWith("cached://") -> {
-                            // Google Drive cached file
-                            com.iptvplayer.app.ui.main.M3uUpdater.readCache(this@ChannelListActivity)
-                                ?: assets.open("amrito.m3u").bufferedReader().use { it.readText() }
-                        }
-                        else -> {
-                            // Remote URL
-                            val request = Request.Builder().url(url).build()
-                            client.newCall(request).execute().use { response ->
-                                if (!response.isSuccessful) throw Exception("HTTP ${response.code}")
-                                response.body?.string() ?: throw Exception("Empty response")
-                            }
-                        }
+                    if (url.startsWith(ASSET_PREFIX)) {
+                        // Local asset file
+                        val fileName = url.removePrefix(ASSET_PREFIX)
+                        assets.open(fileName).bufferedReader().use { it.readText() }
+                    } else {
+                        // Remote URL — auto-cache and update
+                        PlaylistUpdater.getLatestContent(this@ChannelListActivity, url)
                     }
                 }
 
