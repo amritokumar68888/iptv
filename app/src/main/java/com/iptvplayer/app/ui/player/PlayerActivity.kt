@@ -82,6 +82,9 @@ class PlayerActivity : AppCompatActivity() {
         binding.tvChannelName.text = "${currentIndex + 1}-$channelName"
         updateTime()
 
+        // Default logo — app logo দেখাবে
+        binding.ivChannelLogo.setImageResource(R.drawable.logo)
+
         // ── Buttons ──────────────────────────────────────────────────────────
         binding.btnBack.setOnClickListener { finish() }
         binding.btnChannelList.setOnClickListener { toggleChannelList() }
@@ -310,6 +313,19 @@ class PlayerActivity : AppCompatActivity() {
         binding.tvChannelName.text = "${currentIndex + 1}-$channelName"
         binding.tvError.visibility = View.GONE
         binding.btnPlayPause.setImageResource(R.drawable.ic_pause)
+
+        // Channel logo — channel-এর logo থাকলে সেটা, না হলে app logo
+        if (ch.logoUrl.isNotEmpty()) {
+            com.bumptech.glide.Glide.with(this)
+                .load(ch.logoUrl)
+                .placeholder(R.drawable.logo)
+                .error(R.drawable.logo)
+                .fitCenter()
+                .into(binding.ivChannelLogo)
+        } else {
+            binding.ivChannelLogo.setImageResource(R.drawable.logo)
+        }
+
         player?.release(); player = null
         initializePlayer(ch.url)
         overlayAdapter.selectedUrl = ch.url
