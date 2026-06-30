@@ -392,16 +392,21 @@ class PlayerActivity : AppCompatActivity() {
     // ── dispatchKeyEvent: ENTER কে DPAD_CENTER হিসেবে treat করো ─────────────
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        // TV remote-এ ENTER key Android back হিসেবে কাজ করে — এটা আটকাও
+        // ENTER → DPAD_CENTER (TV remote OK button)
         if (event.keyCode == KeyEvent.KEYCODE_ENTER) {
             val newEvent = KeyEvent(
                 event.downTime, event.eventTime,
                 event.action, KeyEvent.KEYCODE_DPAD_CENTER,
                 event.repeatCount, event.metaState
             )
-            return super.dispatchKeyEvent(newEvent)
+            return onKeyDown(KeyEvent.KEYCODE_DPAD_CENTER, newEvent)
         }
-        return super.dispatchKeyEvent(event)
+
+        // সব key নিজে handle করব — focus কোনো button-এ না গিয়ে activity-তে থাকবে
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            return onKeyDown(event.keyCode, event)
+        }
+        return true  // ACTION_UP সব consume করো
     }
 
     // ── Keys ──────────────────────────────────────────────────────────────────
@@ -534,7 +539,7 @@ class PlayerActivity : AppCompatActivity() {
                 when {
                     binding.channelListOverlay.visibility == View.VISIBLE -> { hideChannelList(); true }
                     binding.bottomBar.visibility == View.VISIBLE -> { hideControls(); true }
-                    else -> super.onKeyDown(keyCode, event)
+                    else -> { finish(); true }  // player exit
                 }
             }
 
