@@ -21,6 +21,15 @@ class ChannelListAdapter(
             notifyDataSetChanged()
         }
 
+    private var focusedIndex: Int = -1
+
+    fun setFocused(index: Int) {
+        val old = focusedIndex
+        focusedIndex = index
+        if (old >= 0) notifyItemChanged(old)
+        if (index >= 0) notifyItemChanged(index)
+    }
+
     inner class ViewHolder(private val b: ItemChannelListBinding) :
         RecyclerView.ViewHolder(b.root) {
 
@@ -29,10 +38,13 @@ class ChannelListAdapter(
             b.tvChannelName.text = channel.name
 
             // Highlight currently playing channel
-            if (channel.url == selectedUrl) {
-                b.root.setBackgroundColor(Color.parseColor("#8B0000"))
-            } else {
-                b.root.setBackgroundColor(Color.TRANSPARENT)
+            when {
+                channel.url == selectedUrl ->
+                    b.root.setBackgroundColor(Color.parseColor("#8B0000"))
+                position == focusedIndex ->
+                    b.root.setBackgroundColor(Color.parseColor("#CC6600"))
+                else ->
+                    b.root.setBackgroundColor(Color.TRANSPARENT)
             }
 
             // Logo
