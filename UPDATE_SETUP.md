@@ -96,17 +96,38 @@ https://github.com/amritokumar68888/iptv/blob/main/update/allowed-ips.txt
 > ⚠️ অ্যাপে টা list টা **cache** করে রাখে — network fail করলেও সর্বশেষ
 > কাজ করা list টাই চলবে। File টা **খালি** করে দিলে কেউ ঢুকতে পারবে না।
 
-### Google Drive-এ রাখতে চাইলে
+### Google Drive-কে ২য় source (mirror) হিসেবে যোগ করা
 
-`data/ip/IpAllowList.kt`-এ এক লাইন বদলান:
+দুটো host ব্যবহার করলে একটা block/down হলেও অ্যাপ বন্ধ হবে না।
+
+**১.** `allowed-ips.txt` file টা Drive-এ upload করুন এবং
+   **"Anyone with the link"** করে share করুন
+
+**২.** `data/ip/IpAllowList.kt`-এ বসান:
 
 ```kotlin
-const val IPS_URL_DRIVE_OVERRIDE =
+const val IPS_URL_FALLBACK =
     "https://drive.google.com/uc?export=download&id=YOUR_ALLOWED_IPS_FILE_ID"
 ```
 
-> File টা অবশ্যই **"Anyone with the link"** করে share করতে হবে, নাহলে
-> anonymous fetch fail করবে।
+> ⚠️ Drive-এ প্রতিবার file replace করলে file ID একই থাকে, তাই আবার কোড
+> এডিট করতে হবে না — শুধু Drive-এ নতুন content আপলোড করবেন।
+>
+> 📌 **একইভাবে update manifest-এর জন্য:** `UpdateConfig.kt`-এর
+> `MANIFEST_URL_FALLBACK`।
+>
+> 🔎 কোন source থেকে list পাওয়া গেছে দেখতে: `IpAllowList.lastSource(context)`।
+
+### Sources কীভাবে try হয়
+
+```
+১. GitHub raw      ← primary (instant update, browser-এ এডিট)
+২. Drive fallback  ← যোগ করা থাকলে (quota/virus-page handle করা আছে)
+৩. Local cache     ← শেষবার পাওয়া list
+৪. Bundled default ← 103.7.4.12
+```
+
+প্রথম সফল source-টাই ব্যবহার হবে — একটা fail করলে পরেরটায় যাবে।
 
 ---
 

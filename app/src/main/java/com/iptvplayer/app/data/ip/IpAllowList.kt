@@ -30,18 +30,22 @@ import okhttp3.Request
 object IpAllowList {
 
     /**
-     * Default: এই repo-র GitHub-hosted file।
+     * Primary source: এই repo-র GitHub-hosted file।
      * GitHub web-এ সরাসরি এডিট করা যায় — push/token কিছু লাগে না।
      */
     const val IPS_URL =
         "https://raw.githubusercontent.com/amritokumar68888/iptv/main/update/allowed-ips.txt"
 
     /**
-     * Google Drive-এ রাখতে চাইলে উপরেরটার বদলে এটা দিন:
+     * Optional 2nd source (mirror)। GitHub fail হলে এটা try করা হবে।
+     *
+     * Google Drive-এ রাখতে চাইলে file টা "Anyone with the link" করে share
+     * করে এখানে বসান:
      *   "https://drive.google.com/uc?export=download&id=<ALLOWED_IPS_FILE_ID>"
-     * (file টা "Anyone with the link" করে share করতে হবে)
+     *
+     * খালি রাখলে শুধু IPS_URL ব্যবহার হবে।
      */
-    const val IPS_URL_DRIVE_OVERRIDE = ""
+    const val IPS_URL_FALLBACK = ""
 
     /** কোনো list পাওয়া না গেলে (একেবারে প্রথমবার + offline) এটাই ব্যবহার হবে */
     val DEFAULT_IPS = listOf("103.7.4.12")
@@ -49,33 +53,50 @@ object IpAllowList {
     private const val PREFS = "ip_allowlist_prefs"
     private const val KEY_TEXT = "ips_text"
     private const val KEY_TIME = "ips_time"
-
-    private val url: String
-        get() = IPS_URL_DRIVE_OVERRIDE.ifBlank { IPS_URL }
-
-    // ── Network refresh ───────────────────────────────────────────────────────
+    private const val KEY_SOURCE = "ips_source"
 
     /**
-     * Remote file থেকে list নামিয়ে cache করে।
-     * @return true = নতুন list পাওয়া ও সংরক্ষণ করা হয়েছে
+     * কোন কোন URL ক্রমে try করা হবে — প্রথম যেটা সফল হবে সেটাই ব্যবহার হবে।
+     * একটা fail করলে অন্যটা কাজ করবে, তাই একটা host block/down হলেও
+     * গ্রাহকের অ্যাপ বন্ধ হবে না।
+     */
+    fun sources(): List<String> =
+        listOf(IPS_URL, IPS_URL_FALLBACK)
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+
+    // ── Network refresh ──────────────────────────────────────────────────────
+
+    /**
+     * Sources গুলো ক্রমে try করে list নামিয়ে cache করে।
+     * @return true = কোনো একটা source থেকে নতুন list পাওয়া ও সংরক্ষণ করা হয়েছে
      */
     suspend fun refresh(context: Context): Boolean = withContext(Dispatchers.IO) {
-        try {
-            val text = fetchText(url)
-            if (text.isBlank()) return@withContext false
+        for (source in sources()) {
+            try {
+                val text = fetchText(source)
+                if (text.isBlank()) continue
 
-            // কিছু entry পেলেই সংরক্ষণ করো (ফাঁকা/ভুল file হলে পুরনোটা থাকবে)
-            if (parse(text).isEmpty()) return@withContext false
+                // কিছু entry পেলেই সংরক্ষণ করো (ফাঁকা/ভুল file হলে পুরনোটা থাকবে)
+                if (parse(text).isEmpty()) continue
 
-            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                .edit()
-                .putString(KEY_TEXT, text)
-                .putLong(KEY_TIME, System.currentTimeMillis())
-                .apply()
-            true
-        } catch (e: Exception) {
-            false
+                save(context, text, source)
+                return@withContext true
+            } catch (e: Exception) {
+                // এই source fail — পরেরটায় যাও
+            }
         }
+        false
+    }
+
+    private fun save(context: Context, text: String, source: String) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_TEXT, text)
+            .putLong(KEY_TIME, System.currentTimeMillis())
+            .putString(KEY_SOURCE, source)
+            .apply()
     }
 
     // ── Read ─────────────────────────────────────────────────────────────────
@@ -107,6 +128,11 @@ object IpAllowList {
     fun lastUpdated(context: Context): Long =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getLong(KEY_TIME, 0L)
+
+    /** সর্বশেষ কোন source থেকে list পাওয়া গেছে (debug/UI)। */
+    fun lastSource(context: Context): String =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_SOURCE, "") ?: ""
 
     // ── Parsing ──────────────────────────────────────────────────────────────
 

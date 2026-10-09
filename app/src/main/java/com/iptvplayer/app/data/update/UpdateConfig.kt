@@ -40,6 +40,17 @@ object UpdateConfig {
     const val MANIFEST_URL_OVERRIDE =
         "https://raw.githubusercontent.com/amritokumar68888/iptv/main/update/update-manifest.json"
 
+    /**
+     * Optional 2nd source (mirror)। GitHub fail হলে এটা try করা হবে।
+     *
+     * Google Drive-এ রাখতে চাইলে file টা "Anyone with the link" করে share
+     * করে এখানে বসান:
+     *   "https://drive.google.com/uc?export=download&id=<MANIFEST_FILE_ID>"
+     *
+     * খালি রাখলে শুধু MANIFEST_URL_OVERRIDE ব্যবহার হবে।
+     */
+    const val MANIFEST_URL_FALLBACK = ""
+
     /** কত ঘণ্টা পর পর নিজে থেকে update check করবে (0 = প্রতিবার app খুললে) */
     const val CHECK_INTERVAL_HOURS = 6
 
@@ -60,6 +71,16 @@ object UpdateConfig {
     val manifestUrl: String
         get() = if (MANIFEST_URL_OVERRIDE.isNotBlank()) MANIFEST_URL_OVERRIDE
         else "https://drive.google.com/uc?export=download&id=$MANIFEST_FILE_ID"
+
+    /**
+     * যে URL গুলো ক্রমে try করা হবে — প্রথম যেটা সফল হবে সেটাই ব্যবহার হবে।
+     * একটা host block/down হলেও update চেক বন্ধ হবে না।
+     */
+    val manifestUrls: List<String>
+        get() = listOf(manifestUrl, MANIFEST_URL_FALLBACK)
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
 
     /** ঠিকঠাক configure করা হয়েছে কি না */
     val isConfigured: Boolean

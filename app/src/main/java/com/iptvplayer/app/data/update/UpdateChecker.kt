@@ -35,7 +35,7 @@ object UpdateChecker {
             return@withContext Result.Failed("Update system এখনো configure করা হয়নি")
         }
         try {
-            val json = JSONObject(fetchText(UpdateConfig.manifestUrl))
+            val json = JSONObject(fetchTextFromAnySource())
             val info = UpdateInfo.fromJson(json)
 
             if (info.versionCode <= 0) {
@@ -71,6 +71,22 @@ object UpdateChecker {
     private fun markChecked(context: Context) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putLong(KEY_LAST_CHECK, System.currentTimeMillis()).apply()
+    }
+
+    /**
+     * Configure করা সব source ক্রমে try করে — প্রথম যেটা সফল হয় সেটা ফেরত দেয়।
+     * (GitHub fail করলে Drive fallback কাজ করবে।)
+     */
+    private fun fetchTextFromAnySource(): String {
+        var lastError: Exception? = null
+        for (source in UpdateConfig.manifestUrls) {
+            try {
+                return fetchText(source)
+            } catch (e: Exception) {
+                lastError = e
+            }
+        }
+        throw lastError ?: IllegalStateException("কোনো manifest source নেই")
     }
 
     private fun fetchText(url: String): String {
