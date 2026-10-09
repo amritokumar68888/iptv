@@ -81,4 +81,8 @@
     <string name="play_protect_help">Install আটকে গেলে ("Play Protect" / "Unsafe app blocked") — এখানে চাপুন: Play Protect সেটিংস খুলবে। সেখানে “Scan apps with Play Protect” বন্ধ করুন, তারপর আবার Install করুন।</string>
     <string name="play_protect_opening">Play Protect সেটিংস খোলা হচ্ছে…\n“Scan apps with Play Protect” বন্ধ করে আবার চেষ্টা করুন।</string>
     <string name="play_protect_after_download">Download শেষ। Installer খুলছে…\nযদি Play Protect আটকায় → “Install anyway” চাপুন, অথবা নিচের লেখায় চাপ দিয়ে Play Protect বন্ধ করুন।</string>
+
+    <!-- Update notification -->
+    <string name="notification_update_title">নতুন update এসেছে</string>
+    <string name="notification_update_text">Sky OTT v%1$s (build %2$d) — চাপ দিয়ে update করুন</string>
 </resources>

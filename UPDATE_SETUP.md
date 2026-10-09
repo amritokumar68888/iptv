@@ -55,7 +55,47 @@ flowchart TD
 
 ---
 
-## 🛡️ Google Play Protect — install আটকে দেয়
+## � Update এলে notification
+
+আগে গ্রাহককে নিজে **🔄 Check for update** চাপতে হতো। এখন তিনটাই হয়:
+
+| কখন | কী হয় |
+|---|---|
+| **অ্যাপ খুললেই** | সাথে সাথে check → update থাকলে **dialog** + **status-bar notification** |
+| **Notification-এ চাপ** | অ্যাপ খুলে সরাসরি update dialog |
+| **অ্যাপ বন্ধ** | Background-এ প্রতি ৬ ঘণ্টায় check → notification (WorkManager) |
+
+> ⚠️ **Android 13+ এ notification permission লাগে** — অ্যাপ প্রথমবার খুললে
+> নিজেই চেয়ে নেয় ("Allow" চাপলে হবে)। না দিলে notification আসবে না,
+> কিন্তু অ্যাপ খোলার সময় dialog তো আসবেই।
+
+### কোন পথে কোন mechanism
+
+```
+Sideload (APK কপি করে)
+   → অ্যাপ খোলা: সবসময় check (কোনো throttle নেই) → dialog + notification
+   → অ্যাপ বন্ধ: WorkManager প্রতি ৬ ঘণ্টায় → notification
+
+Google Play থেকে install
+   → Play In-App Updates (Play নিজেই সব সামলায়)
+   → app-এর notification দেওয়া হয় না (দুটো মিলে গোলমাল হতো)
+```
+
+> 💡 **Android-এর সীমা:** periodic background work **সর্বনিম্ন ১৫ মিনিট**, আর
+> دقیক সময় Android নিজে ঠিক করে (battery বাঁচাতে)। তাই background
+> notification **তাৎক্ষণিক নয়** — কিন্তু অ্যাপ খুললেই সাথে সাথে আসে।
+
+### ফাইল
+
+| File | কাজ |
+|---|---|
+| `data/update/UpdateNotifier.kt` | notification channel + দেখানো/মোছা |
+| `data/update/UpdateWorker.kt` | WorkManager periodic check |
+| `ui/main/MainActivity.kt` | খুললেই check + permission + notification |
+
+---
+
+## �🛡️ Google Play Protect — install আটকে দেয়
 
 ### ⛔ যা কোনো কোড দিয়েই possible না
 

@@ -96,6 +96,8 @@ class UpdateDialog(private val activity: Activity) {
                     tvProgress.text = activity.getString(R.string.update_installing)
                     tvHelp.visibility = View.VISIBLE
                     InstallHelper.install(activity, apk)
+                    // install শুরু হয়েছে — status bar-এর notification সরাও
+                    com.iptvplayer.app.data.update.UpdateNotifier.clear(activity)
                     // Dialog বন্ধ করি না — গ্রাহক আটকে গেলে যেন helper টা দেখতে পায়
                     tvHelp.postDelayed({ d.dismiss() }, 20_000)
 

@@ -1,8 +1,11 @@
 package com.iptvplayer.app.ui.main
 
+import android.Manifest
 import android.app.Dialog
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -10,6 +13,7 @@ import android.view.Window
 import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
@@ -19,6 +23,8 @@ import com.iptvplayer.app.data.update.InstallSource
 import com.iptvplayer.app.data.update.PlayUpdateManager
 import com.iptvplayer.app.data.update.UpdateChecker
 import com.iptvplayer.app.data.update.UpdateConfig
+import com.iptvplayer.app.data.update.UpdateNotifier
+import com.iptvplayer.app.data.update.UpdateWorker
 import com.iptvplayer.app.databinding.ActivityMainBinding
 import com.iptvplayer.app.ui.channels.ChannelListActivity
 import com.iptvplayer.app.ui.channels.RecentManager
@@ -35,6 +41,12 @@ class MainActivity : AppCompatActivity() {
         private const val TAG = "SkyOTT-Updater"
         private const val PLAY_UPDATE_REQUEST = 1001
     }
+
+    // Android 13+: notification দেখানোর অনুমতি
+    private val askNotificationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            Log.i(TAG, "POST_NOTIFICATIONS granted=$granted")
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,6 +66,30 @@ class MainActivity : AppCompatActivity() {
 
         // App version update check in background
         checkForAppUpdate()
+
+        // Background check + notification (অ্যাপ বন্ধ থাকলেও)
+        UpdateNotifier.ensureChannel(this)
+        UpdateWorker.schedule(this)
+        requestNotificationPermissionIfNeeded()
+
+        // Notification-এ চাপ দিয়ে এসেছে?
+        handleNotificationIntent()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleNotificationIntent()
+    }
+
+    /** Android 13+ এ notification permission — না চাইলে notification দেখানো যায় না। */
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        val granted = checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED
+        if (!granted) {
+            askNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 
     // ── App (APK) Update ──────────────────────────────────────────────────────
@@ -75,11 +111,20 @@ class MainActivity : AppCompatActivity() {
         // ── Sideload করা app → manifest-based updater ────────────────────────
         // (গ্রাহককে একবার "Install unknown apps" allow করতে হবে)
         lifecycleScope.launch {
-            // Auto-check-এ throttle মানা হয় (বারবার network call এড়াতে)
-            when (val result = UpdateChecker.checkIfDue(this@MainActivity)) {
-                is UpdateChecker.Result.Available -> showUpdateDialog(result)
-                UpdateChecker.Result.UpToDate ->
+            // ⚠️ অ্যাপ খুললেই **সবসময়** check — কোনো throttle নেই।
+            // গ্রাহক যাতে নিজে কিছু না চেপেই জেনে যায়।
+            when (val result = UpdateChecker.check(this@MainActivity)) {
+                is UpdateChecker.Result.Available -> {
+                    // status bar-এ notification-ও দাও (dialog বন্ধ করে দিলেও থাকবে)
+                    UpdateNotifier.notifyAvailable(
+                        this@MainActivity, result.info, result.forced
+                    )
+                    showUpdateDialog(result)
+                }
+                UpdateChecker.Result.UpToDate -> {
+                    UpdateNotifier.clear(this@MainActivity)
                     setStatus(getString(R.string.already_latest), 4000)
+                }
                 is UpdateChecker.Result.Failed ->
                     // আগে এখানে চুপচাপ ignore করা হতো — এখন দেখা যাবে
                     setStatus(getString(R.string.check_failed, result.message))
@@ -133,6 +178,26 @@ class MainActivity : AppCompatActivity() {
             // Dialog দেখাতে ব্যর্থ হলেও যেন app crash না করে
             Log.e(TAG, "Update dialog failed", e)
             setStatus(getString(R.string.check_failed, e.message ?: "dialog error"))
+        }
+    }
+
+    /**
+     * Notification-এ চাপ দিয়ে এলে সাথে সাথে আবার check + dialog।
+     * (onCreate-এ check তো হয়ই, কিন্তু intent extra থাকলে user সেটাই চায়।)
+     */
+    private fun handleNotificationIntent() {
+        if (intent?.getBooleanExtra(UpdateNotifier.EXTRA_OPEN_UPDATE, false) != true) return
+        intent.removeExtra(UpdateNotifier.EXTRA_OPEN_UPDATE)
+        lifecycleScope.launch {
+            when (val result = UpdateChecker.check(this@MainActivity)) {
+                is UpdateChecker.Result.Available -> showUpdateDialog(result)
+                UpdateChecker.Result.UpToDate -> {
+                    UpdateNotifier.clear(this@MainActivity)
+                    setStatus(getString(R.string.already_latest), 4000)
+                }
+                is UpdateChecker.Result.Failed ->
+                    setStatus(getString(R.string.check_failed, result.message))
+            }
         }
     }
 

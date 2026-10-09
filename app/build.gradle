@@ -14,8 +14,8 @@ android {
         targetSdk 34
         // ⚠️ IMPORTANT: প্রতিবার নতুন version ছাড়ার সময় versionCode ১ করে বাড়ান।
         // In-app auto update এই versionCode দিয়েই compare করে (UPDATE_SETUP.md দেখুন)।
-        versionCode 8
-        versionName "1.7"
+        versionCode 9
+        versionName "1.8"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -97,6 +97,9 @@ dependencies {
 
     // Google Play In-App Updates (normal app-এর মতো update, কোনো prompt নেই)
     implementation 'com.google.android.play:app-update:2.1.0'
+
+    // Background update check (notification-এর জন্য)
+    implementation 'androidx.work:work-runtime-ktx:2.9.0'
 
     // Coroutines
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
