@@ -13,9 +13,12 @@ name: Build & Publish Update
 on:
   push:
     branches: [ main, master ]
-    # bot-এর manifest commit যাতে আবার build trigger না করে
+    # এই file গুলো শুধু data — অ্যাপ কোড নয়, তাই build দরকার নেই।
+    # (allowed-ips.txt এডিট করলেই গ্রাহকের অ্যাপ নতুন list পায়, নতুন APK ছাড়া)
     paths-ignore:
       - 'update/update-manifest.json'
+      - 'update/allowed-ips.txt'
+      - '**/*.md'
   workflow_dispatch:
 
 # Release তৈরি ও manifest commit করার জন্য write permission দরকার
