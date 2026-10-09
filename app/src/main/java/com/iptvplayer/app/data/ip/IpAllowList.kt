@@ -22,9 +22,14 @@ import okhttp3.Request
  *      # Sky OTT allowed IPs
  *      103.7.4.12          ← exact IP
  *      103.7.4.13          ← ২য় IP (অনেকগুলো দেওয়া যাবে)
- *      192.168.1.*         ← শেষে * দিলে ওই prefix-এর সব IP
+ *      103.7.4.0/24        ← CIDR (এটাই সবচেয়ে পরিষ্কার, অথবা `/16`, `/8`)
+ *      103.7.4.*           ← `/24`-এর সংক্ষিপ্ত রূপ
+ *      103.7.4.            ← শেষে dot দিলেও `/24`
  *
- *  ⚠️ কোনো entry না পেলে বা network fail করলে সর্বশেষ কাজ করা list-টাই
+ *  💡 `/24` মানে ওই নেটওয়ার্কের **সব** IP (256টা) অটোমেটিক allowed —
+ *     এক একটা IP লিখতে হবে না। `/16` (65,536টা), `/8` (16M) এও কাজ করে।
+ *
+ *  ⚠️ কোনো entry না মুলে বা network fail করলে সর্বশেষ কাজ করা list-টাই
  *     ব্যবহার হবে। file টা খালি করলে কেউ ঢুকতে পারবে না (fail-closed)।
  */
 object IpAllowList {
@@ -162,18 +167,83 @@ object IpAllowList {
             .toList()
     }
 
-    /** Entry টা বৈধ কি না — exact IPv4, অথবা শেষে `*` দেওয়া prefix। */
+    /**
+     * Entry টা বৈধ কি না। সমর্থিত format:
+     *   - exact IPv4          `103.7.4.12`
+     *   - CIDR                `103.7.4.0/24`  (এটাই বাঞ্ছনীয়)
+     *   - prefix wildcard     `103.7.4.*`
+     *   - trailing dot (/24)  `103.7.4.`
+     */
     fun isValidEntry(entry: String): Boolean {
         val e = entry.trim()
         if (e.isEmpty()) return false
-        return if (e.endsWith(".*")) isIPv4(e.dropLast(2) + ".0") && e.count { it == '.' } == 3
-        else isIPv4(e)
+
+        // CIDR: a.b.c.d/BITS
+        if (e.contains('/')) return parseCidr(e) != null
+
+        if (e.endsWith(".*")) return isIPv4(e.dropLast(2) + ".0")
+        if (e.endsWith(".") && e.count { it == '.' } == 3) return isIPv4(e + "0")
+        return isIPv4(e)
     }
 
-    private fun matches(entry: String, ip: String): Boolean = when {
-        entry == ip -> true
-        entry.endsWith(".*") -> ip.startsWith(entry.dropLast(1))  // "103.7.4." prefix
-        else -> false
+    /**
+     * Entry টা IP-এর সাথে মেলে কি না।
+     *
+     *  `103.7.4.0/24`  → 103.7.4.0 – 103.7.4.255 (256টা IP)
+     *  `103.7.4.12/24` → host bits বাদ দিয়ে নেটওয়ার্ক ধরে, তাই একই range
+     *  `103.7.4.*`     → /24-এর সমান
+     *  `103.7.4.`      → /24-এর সমান
+     *  `103.7.4.12`    → শুধু ওই একটা IP
+     */
+    private fun matches(entry: String, ip: String): Boolean {
+        val e = entry.trim()
+        if (e == ip) return true
+        if (!isIPv4(ip)) return false
+
+        // CIDR
+        if (e.contains('/')) {
+            val cidr = parseCidr(e) ?: return false
+            return (toLong(ip) and cidr.mask) == (cidr.network and cidr.mask)
+        }
+
+        // prefix wildcard "103.7.4.*" → /24
+        if (e.endsWith(".*")) {
+            val base = e.dropLast(2)
+            return isIPv4(base + ".0") && matches("$base.0/24", ip)
+        }
+
+        // trailing dot "103.7.4." → /24
+        if (e.endsWith(".") && e.count { it == '.' } == 3) {
+            return isIPv4(e + "0") && matches(e + "0/24", ip)
+        }
+
+        return false
+    }
+
+    private class Cidr(val network: Long, val mask: Long)
+
+    /** `103.7.4.0/24` → network bits + mask। ভুল হলে null। */
+    private fun parseCidr(entry: String): Cidr? {
+        val slash = entry.indexOf('/')
+        if (slash <= 0 || slash == entry.length - 1) return null
+
+        val base = entry.substring(0, slash).trim()
+        val bits = entry.substring(slash + 1).trim().toIntOrNull() ?: return null
+
+        if (!isIPv4(base)) return null
+        if (bits !in 0..32) return null
+
+        val mask = if (bits == 0) 0L else (0xFFFFFFFFL shl (32 - bits)) and 0xFFFFFFFFL
+        return Cidr(toLong(base), mask)
+    }
+
+    /** dotted IPv4 → 32-bit number। */
+    private fun toLong(ip: String): Long {
+        var acc = 0L
+        for (part in ip.split('.')) {
+            acc = (acc shl 8) or (part.toLong() and 0xFF)
+        }
+        return acc
     }
 
     private fun isIPv4(s: String): Boolean {
