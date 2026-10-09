@@ -113,4 +113,19 @@
 
     </LinearLayout>
 
+    <!-- Play Protect আটকালে গ্রাহকের জন্য helper -->
+    <TextView
+        android:id="@+id/tvPlayProtectHelp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:background="@color/colorBackground"
+        android:clickable="true"
+        android:focusable="true"
+        android:lineSpacingMultiplier="1.25"
+        android:padding="12dp"
+        android:text="@string/play_protect_help"
+        android:textColor="@color/colorSubText"
+        android:textSize="12sp" />
+
 </LinearLayout>

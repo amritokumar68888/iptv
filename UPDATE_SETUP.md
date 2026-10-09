@@ -55,6 +55,45 @@ flowchart TD
 
 ---
 
+## 🛡️ Google Play Protect — install আটকে দেয়
+
+### ⛔ যা কোনো কোড দিয়েই possible না
+
+**Play Protect-এর স্ক্যান কোনো app থেকে বন্ধ/bypass করা যায় না।** এটা Google
+Play **services**-এর ভেতরে চলে — আপনার app-এর কোনো API, permission,
+manifest flag এর উপর নির্ভর করে না। যে blog/tutorial "bypass" বলে, সেটা মিথ্যা।
+
+### ✅ যা কৰা হয়েছে
+
+Update dialog-এ একটা helper যোগ আছে। গ্রাহক install-এর সময় আটকে গেলে ওই লেখায়
+
+চাপ দিলেই **Play Protect সেটিংস সরাসরি খুলে যায়** — তখন দুটো tap-এ সে নিজে
+"Scan apps with Play Protect" বন্ধ করে আবার install করতে পারে।
+
+> ⚠️ এটা ব্যবহারকারীর **নিজের নিরাপত্তা-সিদ্ধান্ত** — app তাকে বাধ্য করতে বা
+> তার হয়ে সেটিং বদলাতে পারে না (Android-এর ডিজাইন)।
+
+### 🎯 গ্রাহককে যা বলবেন
+
+| যা দেখা যায় | গ্রাহকের কাজ |
+|---|---|
+| **"Unsafe app blocked"** | **More details → Install anyway** |
+| **"App scan recommended"** | **Install anyway** |
+| **"Install blocked" (কোনো option নেই)** | Update dialog-এর লেখায় চাপ → Play Protect → Scan বন্ধ → আবার Install |
+| **কিছুই আসছে না** | Settings → Google → Play Protect → Scan বন্ধ |
+
+### 🏆 আই.একটা আসল সমাধান
+
+**Google Play-তে publish করুন** (SECTION B দেখুন)। Play Store থেকে install করা
+app-কে Play Protect **কখনো ব্লক করে না** — এবং "Install unknown apps" prompt-ও
+আসে না। এটাই এই সমস্যার একমাত্র পূর্ণ সমাধান।
+
+> 📌 এটা **অ্যাপের bug নয়** — Play Protect Google-এর security feature,
+> যা সব sideloaded APK-এর জন্য সমানভাবে কাজ করে (Facebook/WhatsApp-এর
+> APK-ও যদি সাইডলোড করা হয়, একই warning আসে)।
+
+---
+
 ## IP Block — কোন IP অ্যাপ চালাতে পারবে
 
 আগে IP টা কোডে **hardcoded** ছিল (`103.7.4.12`) — বদলাতে নতুন APK লাগত।

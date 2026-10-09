@@ -76,4 +76,9 @@
     <string name="checking_streams">⏳ Channel যাচাই: %1$d/%2$d</string>
     <string name="streams_checked">✓ %1$d/%2$d channel working</string>
     <string name="no_working_channels">কোনো working channel পাওয়া যায়নি</string>
+
+    <!-- Google Play Protect helper -->
+    <string name="play_protect_help">Install আটকে গেলে ("Play Protect" / "Unsafe app blocked") — এখানে চাপুন: Play Protect সেটিংস খুলবে। সেখানে “Scan apps with Play Protect” বন্ধ করুন, তারপর আবার Install করুন।</string>
+    <string name="play_protect_opening">Play Protect সেটিংস খোলা হচ্ছে…\n“Scan apps with Play Protect” বন্ধ করে আবার চেষ্টা করুন।</string>
+    <string name="play_protect_after_download">Download শেষ। Installer খুলছে…\nযদি Play Protect আটকায় → “Install anyway” চাপুন, অথবা নিচের লেখায় চাপ দিয়ে Play Protect বন্ধ করুন।</string>
 </resources>

@@ -8,6 +8,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.lifecycle.LifecycleCoroutineScope
 import com.iptvplayer.app.R
 import com.iptvplayer.app.data.update.ApkDownloader
@@ -42,9 +43,22 @@ class UpdateDialog(private val activity: Activity) {
         val buttonGroup   = d.findViewById<LinearLayout>(R.id.buttonGroup)
         val btnLater      = d.findViewById<Button>(R.id.btnLater)
         val btnUpdateNow  = d.findViewById<Button>(R.id.btnUpdateNow)
+        val tvHelp        = d.findViewById<TextView>(R.id.tvPlayProtectHelp)
 
         tvVersion.text = activity.getString(R.string.update_version, info.versionName, info.versionCode)
         tvChangelog.text = info.changelog.ifBlank { activity.getString(R.string.update_no_changelog) }
+
+        // Play Protect স্ক্যান কোড দিয়ে বন্ধ করা যায় না — কিন্তু গ্রাহককে
+        // সরাসরি সেটিংসে পৌঁছে দেওয়া যায়, যাতে দুটো tap-এ সে নিজে বন্ধ করতে পারে।
+        tvHelp.setOnClickListener {
+            val opened = InstallHelper.openPlayProtectSettings(activity)
+            Toast.makeText(
+                activity,
+                if (opened) activity.getString(R.string.play_protect_opening)
+                else activity.getString(R.string.update_failed, "settings খোলা যায়নি"),
+                Toast.LENGTH_LONG
+            ).show()
+        }
 
         // Force update হলে "Later" button থাকবে না
         btnLater.visibility = if (forced) View.GONE else View.VISIBLE
@@ -80,8 +94,10 @@ class UpdateDialog(private val activity: Activity) {
                     }
 
                     tvProgress.text = activity.getString(R.string.update_installing)
+                    tvHelp.visibility = View.VISIBLE
                     InstallHelper.install(activity, apk)
-                    d.dismiss()
+                    // Dialog বন্ধ করি না — গ্রাহক আটকে গেলে যেন helper টা দেখতে পায়
+                    tvHelp.postDelayed({ d.dismiss() }, 20_000)
 
                 } catch (e: Exception) {
                     progressBar.visibility = View.GONE
