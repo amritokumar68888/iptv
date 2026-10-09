@@ -4,24 +4,28 @@ package com.iptvplayer.app.data.update
  * App auto-update-এর সব setting একজায়গায়।
  *
  * ────────────────────────────────────────────────────────────────────────────
- *  কীভাবে চালাবেন (step by step: UPDATE_SETUP.md দেখুন)
+ *  কীভাবে নতুন version ছাড়বেন (বিস্তারিত: UPDATE_SETUP.md)
  * ────────────────────────────────────────────────────────────────────────────
- *  ১) নতুন APK build করুন (app/build.gradle-এ versionCode বাড়িয়ে)
- *  ২) APK টা Google Drive-এ upload করে share = "Anyone with the link"
- *  ৩) Drive link: https://drive.google.com/file/d/<APK_FILE_ID>/view
- *     → <APK_FILE_ID> কপি করুন
- *  ৪) নিচের JSON file টা Drive-এ upload করুন (update/update-manifest.json দেখুন),
- *     যেখানে apkUrl = https://drive.google.com/uc?export=download&id=<APK_FILE_ID>
- *  ৫) সেই JSON file-এর <MANIFEST_FILE_ID> নিচে বসান
+ *   ১) `app/build.gradle`-এ `versionCode` ১ করে বাড়ান (versionName-ও)
+ *   ২) git push
  *
- *  ⚠️ গ্রাহকের ফোনে একবার "Install unknown apps" allow করতে হবে —
- *     app নিজেই সেই settings page খুলে দেবে।
+ *  ব্যস। GitHub Actions নিজে:
+ *     • signed APK build করে (Secret-এ রাখা permanent keystore দিয়ে)
+ *     • GitHub Release বানায়, SkyOTT.apk attach করে
+ *     • `update/update-manifest.json` আপডেট করে commit করে
+ *  → গ্রাহকের অ্যাপ পরেরবার খুললেই নতুন version পেয়ে যায়।
+ *
+ *  ⚠️ প্রতিবার **একই** keystore দিয়ে sign হতে হবে, নাহলে update install হবে না।
+ *     (আগের CI প্রতিবার নতুন key বানাত — সেটাই ছিল সবচেয়ে বড় bug।)
+ *
+ *  ⚠️ Sideload করা app-এ একবার "Install unknown apps" allow লাগে —
+ *     Play Store থেকে install করা app-এ কিছুই লাগে না (Play path)।
  */
 object UpdateConfig {
 
     /**
-     * Google Drive-এ রাখা JSON manifest file-এর ID।
-     * খালি/placeholder থাকলে update check বন্ধ থাকবে।
+     * legacy Drive fallback — এখন ব্যবহার হয় না।
+     * GitHub-hosted manifest চালু থাকলে এটা উপেক্ষিত হয়।
      */
     const val MANIFEST_FILE_ID = "YOUR_MANIFEST_FILE_ID"
 

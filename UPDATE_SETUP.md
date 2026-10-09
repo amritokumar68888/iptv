@@ -5,6 +5,35 @@ APK upload নেই, Drive নেই, quota নেই।
 
 ---
 
+## ✅ সেটআপ সম্পন্ন (2026-10-09)
+
+সব কিছু তৈরি ও যাচাই করা হয়েছে। এখন থেকে **শুধু ২ ধাপ** (নিচে "নতুন version ছাড়া" দেখুন)।
+
+| বিষয় | অবস্থা |
+|---|---|
+| Repo | Public ✓ |
+| JDK 17 (keystore বানানোর জন্য) | ইনস্টল ✓ |
+| Signing keystore | তৈরি ✓ (persistent) |
+| GitHub Secrets (4টা) | set ✓ |
+| প্রথম Release | `v1.1-b2` — `SkyOTT.apk` (9.18 MB) ✓ |
+| Manifest auto-update | ✓ (`[skip ci]` commit) |
+| APK signature ↔ keystore | ✓ **হুবহু মিলেছে** |
+
+### 🚨 keystore-এর ব্যাকআপ নিন — এটা না হারাবেন
+
+| File | কোথায় |
+|---|---|
+| Keystore | `C:\xampp\htdocs\iptv-main\iptv-main\skyott.jks` |
+| Password | `%USERPROFILE%\skyott-secrets\keystore-password.txt` |
+
+**দুটোই pendrive / private cloud-এ এখনই কপি করুন।**
+
+> এই key ছাড়া ভবিষ্যতে গ্রাহকের অ্যাপ **আর কখনো update করতে পারবেন না** —
+> সবাইকে আবার manually install করাতে হবে। `*.jks` `.gitignore`-এ আছে, তাই
+> ভুলে GitHub-এ চলে যাওয়ার ভয় নেই।
+
+---
+
 ## কীভাবে কাজ করে
 
 ```mermaid
