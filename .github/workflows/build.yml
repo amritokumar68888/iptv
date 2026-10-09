@@ -80,6 +80,18 @@ jobs:
           echo "tag=v${VN}-b${VC}" >> "$GITHUB_OUTPUT"
           echo "Building versionName=$VN versionCode=$VC"
 
+      # একই tag আবার বানাতে গেলে release step 422 দিয়ে অস্পষ্টভাবে fail করে।
+      # তাই আগেই পরিষ্কার message দিয়ে থামানো হয়।
+      - name: Check that versionCode was bumped
+        run: |
+          TAG="${{ steps.ver.outputs.tag }}"
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "::error::Tag '$TAG' already exists, so there is nothing new to release."
+            echo "::error::app/build.gradle-এ versionCode এক করে বাড়ান (এখন ${{ steps.ver.outputs.code }}), তারপর আবার push করুন।"
+            exit 1
+          fi
+          echo "OK: '$TAG' is new - will build and release."
+
       - name: Build signed release APK
         env:
           KEYSTORE_PATH: skyott.jks
