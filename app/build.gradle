@@ -19,12 +19,27 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // ── Release signing ───────────────────────────────────────────────────────
+    // ⚠️ keystore password কখনো repo-তে লিখবেন না — public repo হলে সবাই দেখে ফেলবে
+    //    এবং আপনার অ্যাপের নামে নকল "update" বানাতে পারবে।
+    //    CI-তে GitHub Secrets থেকে env var হিসেবে আসে (UPDATE_SETUP.md দেখুন)।
+    //    লোকাল build-এ নিজে env var সেট করুন, নাহলে unsigned APK হবে।
+    //
+    // ⚠️ একই keystore সব release-এ ব্যবহার করতে হবে, নাহলে অ্যাপ update install হবে না।
+    def ksFile  = System.getenv("KEYSTORE_PATH") ?: "skyott.jks"
+    def ksPass  = System.getenv("KEYSTORE_PASS")
+    def kAlias  = System.getenv("KEY_ALIAS") ?: "skyott"
+    def kPass   = System.getenv("KEY_PASS") ?: ksPass
+    def canSign = ksPass != null && file(ksFile).exists()
+
     signingConfigs {
         release {
-            storeFile     file(System.getenv("KEYSTORE_PATH") ?: "skyott.jks")
-            storePassword (System.getenv("KEYSTORE_PASS")    ?: "skyott123")
-            keyAlias      (System.getenv("KEY_ALIAS")        ?: "skyott")
-            keyPassword   (System.getenv("KEY_PASS")         ?: "skyott123")
+            if (canSign) {
+                storeFile     file(ksFile)
+                storePassword ksPass
+                keyAlias      kAlias
+                keyPassword   kPass
+            }
         }
     }
 
@@ -32,7 +47,11 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
+            if (canSign) {
+                signingConfig signingConfigs.release
+            } else {
+                logger.lifecycle("⚠️  Release signing নিষ্ক্রিয় — KEYSTORE_PASS env var বা keystore file নেই (unsigned APK)।")
+            }
         }
     }
 

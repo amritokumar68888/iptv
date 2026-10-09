@@ -9,3 +9,8 @@
 .cxx
 local.properties
 app/build/
+
+# ⚠️ Signing keys — কখনো commit করবেন না! (UPDATE_SETUP.md দেখুন)
+*.jks
+*.keystore
+keystore-base64.txt

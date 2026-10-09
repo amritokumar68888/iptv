@@ -74,7 +74,11 @@ object UpdateChecker {
     }
 
     private fun fetchText(url: String): String {
-        var response = DriveClient.ok.newCall(Request.Builder().url(url).build()).execute()
+        // Cache-buster — নাহলে GitHub CDN পুরনো manifest ধরিয়ে রাখতে পারে
+        val cacheBusted = if (url.contains("?")) "$url&_=${System.currentTimeMillis()}"
+                          else "$url?_=${System.currentTimeMillis()}"
+
+        var response = DriveClient.ok.newCall(Request.Builder().url(cacheBusted).build()).execute()
 
         // Drive confirm page হলে follow করো
         if (DriveClient.isHtml(response)) {

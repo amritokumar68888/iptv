@@ -26,11 +26,15 @@ object UpdateConfig {
     const val MANIFEST_FILE_ID = "YOUR_MANIFEST_FILE_ID"
 
     /**
-     * Drive-এর বদলে নিজের direct URL দিতে চাইলে এখানে বসান।
-     * উদাহরণ: "https://myserver.com/skyott/update.json"
-     * না লাগলে খালি রাখুন — তখন Drive ব্যবহার হবে।
+     * Manifest-এর সরাসরি URL।
+     *
+     * GitHub Actions প্রতিটি push-এ এই file টা নিজে থেকে আপডেট করে
+     * (build → Release → manifest commit)। তাই হাতে কিছু এডিট করতে হয় না।
+     *
+     * ⚠️ এর জন্য repo টা **Public** হতে হবে, নাহলে fetch fail করবে।
      */
-    const val MANIFEST_URL_OVERRIDE = ""
+    const val MANIFEST_URL_OVERRIDE =
+        "https://raw.githubusercontent.com/amritokumar68888/iptv/main/update/update-manifest.json"
 
     /** কত ঘণ্টা পর পর নিজে থেকে update check করবে (0 = প্রতিবার app খুললে) */
     const val CHECK_INTERVAL_HOURS = 6

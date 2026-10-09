@@ -1,219 +1,170 @@
 # In-App Auto Update — Setup Guide
 
-গ্রাহকের ফোনে অ্যাপ নিজে থেকে নতুন version check করবে, download করবে, আর
-install করে নতুন version-এ চলে যাবে।
+**push করলেই build → Release → গ্রাহকের অ্যাপ নিজে থেকে update।** কোনো manual
+APK upload নেই, Drive নেই, quota নেই।
 
 ---
 
-## ⚠️ আগে এটা পড়ুন — "Install unknown apps" prompt
+## কীভাবে কাজ করে
 
-**Sideload করা (Play Store-এর বাইরের) APK-তে "Install unknown apps" prompt
-কোনোভাবেই সরানো যায় না।** এটা Android-এর core security feature, কোনো কোড/API
-দিয়ে common অ্যাপে bypass করা অসম্ভব।
+```mermaid
+flowchart TD
+    A["আপনি git push করলেন"] --> B["GitHub Actions<br/>(Build & Publish Update)"]
+    B --> C["Release APK build + sign<br/>(persistent keystore)"]
+    C --> D["GitHub Release তৈরি<br/>SkyOTT.apk attach"]
+    D --> E["update-manifest.json<br/>auto-generate + commit"]
+    E --> F["গ্রাহকের অ্যাপ<br/>manifest fetch করে"]
+    F --> G{"নতুন versionCode?"}
+    G -->|হ্যাঁ| H["Update dialog → download → install"]
+    G -->|না| I["চুপচাপ চালু থাকে"]
+```
 
-অ্যাপ এখন **দুটো পথ** নিজেই বুঝে নেয়:
+| URL | কী |
+|---|---|
+| `https://raw.githubusercontent.com/amritokumar68888/iptv/main/update/update-manifest.json` | অ্যাপ যা চেক করে (auto-generated) |
+| `https://github.com/amritokumar68888/iptv/releases/download/v1.1-b2/SkyOTT.apk` | APK download (auto) |
 
-| গ্রাহকের ফোনে অ্যাপ যেভাবে | কোন updater চলবে | Permission prompt |
+---
+
+## ⚠️ আগে জেনে নিন — ২টা জরুরি কথা
+
+### ১. এই অ্যাপে update সিস্টেম নেই — তাই প্রথমবার manually দিতে হবে
+
+Drive/গ্রাহকের কাছে এখন যে APK আছে (v1) সেটা **পুরনো কোডে** বানানো —
+**তাতে update-checker নেই**। যে অ্যাপে feature নেই, সে নিজে কখনো update চেক করবে না।
+
+> 👉 তাই **একবার** গ্রাহককে নতুন APK manually install করাতে হবে।
+> **তারপর থেকে** সব update অটোমেটিক হবে।
+
+### ২. সবচেয়ে বড় ফাঁদ — signing key (keystore)
+
+আগের CI workflow প্রতিবার `keytool -genkey` দিয়ে **নতুন random key** বানাত।
+মানে প্রতিটা APK-এর signature আলাদা। Android একই key ছাড়া update install করে না:
+
+```
+INSTALL_FAILED_UPDATE_INCOMPATIBLE   ← signature মিলছে না
+```
+
+**তাই এখন থেকে একটাই permanent keystore ব্যবহার হবে** (GitHub Secrets-এ রাখা)।
+
+> ⚠️ ইতিমধ্যে বিতরণ করা APK-এর key হারিয়ে গেছে (ephemeral ছিল)।
+> তাই গ্রাহকদের **একবার uninstall → নতুন APK install** করতে হবে।
+> এরপর থেকে আর কখনো এটা লাগবে না।
+
+---
+
+## একবারের setup (একবারই)
+
+### ধাপ ১ — JDK ইনস্টল করুন
+
+```powershell
+winget install EclipseAdoptium.Temurin.17.JDK
+```
+
+তারপর **নতুন terminal** খুলুন (PATH আপডেট হওয়ার জন্য)।
+
+### ধাপ ২ — Signing keystore বানান
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\create-keystore.ps1
+```
+
+- এটা `skyott.jks` বানাবে এবং একটা password জিজ্ঞেস করবে
+- **password ভুলবেন না** — এটাই পরে GitHub Secret-এ দিতে হবে
+- শেষে `keystore-base64.txt` file বানাবে (Secret-এ paste করার জন্য)
+
+> 🚨 `skyott.jks` ও password **কোথাও হারাবেন না**। হারালে আর কখনো
+> গ্রাহকের অ্যাপ update করতে পারবেন না — সবাইকে আবার manually install করাতে হবে।
+> **pendrive / private cloud-এ backup রাখুন।**
+
+### ধাপ ৩ — GitHub Secrets যোগ করুন (৪টা)
+
+GitHub → আপনার repo → **Settings** → **Secrets and variables** → **Actions**
+→ **New repository secret** → এই চারটা যোগ করুন:
+
+| Name | Value |
+|---|---|
+| `KEYSTORE_BASE64` | `keystore-base64.txt`-এর পুরো content |
+| `KEYSTORE_PASS` | আপনি যে password দিয়েছেন |
+| `KEY_ALIAS` | `skyott` |
+| `KEY_PASS` | একই password |
+
+### ধাপ ৪ — Repo টা Public করুন ⚠️
+
+**Settings** → নিচে **Change repository visibility** → **Change to public**
+
+**কেন দরকার:** private repo-র file anonymous-এ download করা যায় না — গ্রাহকের
+অ্যাপ manifest/APK fetch করতে পারবে না (401/404)।
+
+> ✅ এখন নিরাপদ: keystore password আর repo-তে নেই (Secret-এ আছে), আর
+> `*.jks` `.gitignore`-এ যোগ করা হয়েছে।
+
+### ধাপ ৫ — First release ছাড়ুন
+
+```powershell
+git add -A
+git commit -m "chore: switch to GitHub-based auto update"
+git push
+```
+
+Push হলেই build → Release → manifest সব automatic হবে।
+
+---
+
+## প্রতিবার নতুন version ছাড়া (এখন থেকে মাত্র ২ ধাপ)
+
+### ধাপ ১ — `app/build.gradle`-এ version বাড়ান
+
+```gradle
+versionCode 3          // ⚠️ অবশ্যই বাড়াতে হবে (2 → 3 → 4 ...)
+versionName "1.2"      // গ্রাহক যা দেখবে
+```
+
+> ⚠️ `versionCode` না বাড়ালে গ্রাহকের অ্যাপ update **ধরবেই না**।
+> এটাই সবচেয়ে জরুরি step।
+
+### ধাপ ২ — push
+
+```powershell
+git add app/build.gradle
+git commit -m "release: v1.2 (build 3)"
+git push
+```
+
+**ব্যস।** Actions নিজে:
+1. signed APK build করবে
+2. Release বানাবে
+3. manifest আপডেট করে commit করবে
+4. গ্রাহকের অ্যাপ পরেরবার খুললেই update দেখবে
+
+> 💡 Changelog বদলাতে চাইলে: `.github/workflows/build.yml`-এর
+> `Generate update manifest` step-এ `"changelog"` লাইনটা এডিট করুন।
+
+---
+
+## Force (বাধ্যতামূলক) update
+
+`build.yml`-এর manifest step-এ:
+
+```python
+"forceUpdate": True,          # "Later" button থাকবে না
+"minSupportedVersionCode": 2, # এর চেয়ে পুরনো হলে জোর করে update
+```
+
+---
+
+## দুই ট্র্যাক — Play Store vs Sideload
+
+অ্যাপ নিজেই বুঝে নেয় কোনটা দরকার (`InstallSource.isFromPlay()`):
+
+| গ্রাহকের ফোনে অ্যাপ যেভাবে | কোন updater | "Install unknown apps"? |
 |---|---|---|
 | **Google Play Store** | Play In-App Updates | ❌ **কখনোই আসে না** |
-| Sideload (APK কপি করে) | Drive updater | ✅ একবার allow করতে হবে |
+| Sideload (APK কপি করা) | GitHub Release updater | ✅ একবার allow |
 
-সিদ্ধান্ত:
-- **সম্পূর্ণ prompt-free normal app experience চাইলে → Play Store-এ publish করুন** (নিচে SECTION B)
-- Sideload-ই রাখতে হলে → SECTION A (একবার permission, তারপর normal)
-
----
-
-## কীভাবে কাজ করে (flow)
-
-```
-App খোলে
-   │
-   ├─ UpdateChecker  ──►  Google Drive থেকে update.json নামায়
-   │                         (versionCode, apkUrl, changelog, forceUpdate)
-   │
-   ├─ নতুন version?
-   │      না  ──►  চুপচাপ চালু হয়
-   │      হ্যাঁ ──►  "Update Available" dialog দেখায় (changelog সহ)
-   │
-   ├─ "Update Now"  ──►  APK download (progress bar সহ)
-   │
-   └─ Download শেষ ──►  Installer নিজে থেকে খোলে
-                            │
-                            └─ গ্রাহক "Install" চাপে → নতুন version চালু
-```
-
----
-
-## SECTION A — Sideload (APK কপি করে দিয়ে update)
-
-> গ্রাহকের ফোনে একবার **"Install unknown apps" allow** করতে হবে।
-> অ্যাপ নিজেই সেই settings page খুলে দেবে।
-
-### ১. `versionCode` বাড়ান
-`app/build.gradle` ফাইলে:
-
-```gradle
-defaultConfig {
-    versionCode 2        // ← প্রতিবার ১ করে বাড়াতে হবে (2, 3, 4 ...)
-    versionName "1.1"    // ← গ্রাহক যা দেখবে
-}
-```
-
-> ⚠️ `versionCode` **না** বাড়ালে অ্যাপ update ধরবে না। এটাই সবচেয়ে জরুরি step।
-
-### ২. Signed release APK build করুন
-
-```bash
-./gradlew assembleRelease
-```
-
-APK পাবেন: `app/build/outputs/apk/release/app-release.apk`
-
-### ৩. APK টা Google Drive-এ upload করুন
-
-1. Drive-এ APK file upload করুন
-2. Right-click → **Share** → **Anyone with the link** → Done
-3. Link-টা এমন হবে:
-   ```
-   https://drive.google.com/file/d/1AbCdEfGhIjKlMnOp/view?usp=sharing
-                                    └───── এই অংশটাই FILE_ID ─────┘
-   ```
-
-### ৪. `update/update-manifest.json` এডিট করুন
-
-```json
-{
-  "versionCode": 2,
-  "versionName": "1.1",
-  "apkUrl": "https://drive.google.com/uc?export=download&id=1AbCdEfGhIjKlMnOp",
-  "changelog": "• নতুন চ্যানেল যোগ করা হয়েছে\n• বাগ ফিক্স",
-  "forceUpdate": false,
-  "minSupportedVersionCode": 1
-}
-```
-
-| Field | মানে |
-|---|---|
-| `versionCode` | নতুন APK-এর versionCode — `build.gradle`-এর সাথে **হুবহু** মিলতে হবে |
-| `versionName` | dialog-এ দেখানো হবে |
-| `apkUrl` | APK-এর direct download link |
-| `changelog` | "What's New" তে দেখাবে (`\n` দিয়ে নতুন লাইন) |
-| `forceUpdate` | `true` = গ্রাহক "Later" চাপতে পারবে না, update বাধ্যতামূলক |
-| `minSupportedVersionCode` | এর চেয়ে পুরনো version হলে জোর করে update |
-
-> 💡 বড় update বাধ্যতামূলক করতে: `"forceUpdate": true` করে দিন।
-
-### ৫. manifest JSON টা Drive-এ upload করুন
-
-1. এডিট করা `update-manifest.json` Drive-এ upload করুন
-2. Share = **Anyone with the link**
-3. তার **FILE_ID** কপি করুন
-
-### ৬. `UpdateConfig.kt` এ FILE_ID বসান
-
-`app/src/main/java/com/iptvplayer/app/data/update/UpdateConfig.kt`:
-
-```kotlin
-const val MANIFEST_FILE_ID = "1XyZ...এখানে manifest file id..."
-```
-
-### ৭. নতুন APK build করে গ্রাহকদের দিয়ে দিন
-
-এবার থেকে যেসব গ্রাহকের ফোনে **পুরনো** অ্যাপ আছে, তারা অ্যাপ খুললেই
-update-এর কথা দেখবে। শুধু দরকার গ্রাহক একবার
-**"Install unknown apps" allow** করবে — অ্যাপ নিজেই সেই settings page খুলে দেবে।
-
----
-
-## Drive-এর বদলে নিজের server ব্যবহার করতে চাইলে
-
-`UpdateConfig.kt` এ:
-
-```kotlin
-const val MANIFEST_URL_OVERRIDE = "https://yourserver.com/skyott/update.json"
-```
-
-আর manifest-এর `apkUrl`-এও নিজের server-এর direct APK link দিন।
-কোনো কোড change লাগবে না।
-
----
-
-## ফাইল কোথায় কোথায়
-
-| File | কাজ |
-|---|---|
-| `data/update/UpdateConfig.kt` | সব setting — Drive file ID, check interval, Play force flag |
-| `data/update/InstallSource.kt` | app Play থেকে install হয়েছে কি না detect করে |
-| `data/update/PlayUpdateManager.kt` | **Play In-App Updates** — prompt-free update (Play path) |
-| `data/update/UpdateInfo.kt` | manifest JSON-এর model |
-| `data/update/UpdateChecker.kt` | নতুন version আছে কি না check করে (sideload path) |
-| `data/update/ApkDownloader.kt` | APK download (progress সহ) |
-| `data/update/InstallHelper.kt` | APK install + permission |
-| `data/update/DriveClient.kt` | Drive/OkHttp shared client |
-| `data/update/AppVersion.kt` | ইনস্টল করা version বের করে |
-| `ui/update/UpdateDialog.kt` | sideload update dialog + progress |
-| `res/layout/dialog_update.xml` | dialog-এর design |
-| `res/xml/file_paths.xml` | FileProvider paths |
-
----
-
-## SECTION B — Google Play Store (কোনো prompt নেই, true normal app)
-
-এই path-এ গ্রাহকের কাছে **কোনো** "Install unknown apps", permission, বা
-installer screen আসে না। Play নিজেই download + install + restart করে দেয় —
-ঠিক যেভাবে Facebook/WhatsApp update হয়।
-
-### যা লাগবে
-1. **Google Play Developer account** (একবার $25)
-2. Play Console-এ app তৈরি করে **Internal testing** track-এ upload করা
-
-### ধাপে ধাপে
-
-#### ১. Signed App Bundle (AAB) build করুন
-```bash
-./gradlew bundleRelease
-```
-পাবেন: `app/build/outputs/bundle/release/app-release.aab`
-
-> Play-তে AAB দিতে হয় (APK নয়)। upload করার সময় Play স্বয়ংক্রিয়ভাবে
-> signed APK বানিয়ে গ্রাহকের ফোনে দেয়।
-
-#### ২. Play Console → app তৈরি → Internal testing → AAB upload
-- **Internal testing** track-এ `app-release.aab` upload করুন
-- Release note লিখুন (এখানেই "What's New" দেখাবে)
-- `versionCode` অবশ্যই আগেরটার চেয়ে বড় হতে হবে
-
-#### ৩. গ্রাহকদের tester হিসেবে add করুন
-Internal testing-এ tester email যোগ করে link share করুন।
-তারা Play Store থেকে install করবে → **এবার থেকে এটাই normal app**।
-
-#### ৪. প্রতিবার নতুন version দিতে
-```gradle
-versionCode 3        // বাড়ান
-versionName "1.2"
-```
-```bash
-./gradlew bundleRelease
-```
-তারপর Play Console-এ নতুন AAB upload → **Publish**।
-গ্রাহকের অ্যাপ খোলার সময় নিজে থেকেই update হয়ে যাবে।
-
-### Force (বাধ্যতামূলক) update করতে
-`UpdateConfig.kt` এ:
-```kotlin
-const val PLAY_FORCE_UPDATE = true   // full-screen Play update, "Later" নেই
-```
-- `false` (default) = background/flexible update — গ্রাহক app চালাতে পারে,
-  download শেষে নিজে থেকে install হয়
-- `true` = IMMEDIATE — Play-এর full-screen progress + auto install + restart
-
-> **Note:** Play-তে "update available" তখনই আসে যখন নতুন AAB **Published**
-> হয় এবং ডিভাইসের versionCode ছোট। Play নিজেই সব সামলায়।
-
-### Production-এ নিতে
-Internal testing-এ সব ঠিক থাকলে **Closed / Open testing** → **Production**।
-Production-এ ১০০% rollout দিলে সব গ্রাহক normal app-এর মতো update পাবে।
+> Sideload-এ "Install unknown apps" prompt **কোনোভাবেই সরানো যায় না** — এটা
+> Android-এর core security feature, common অ্যাপে bypass অসম্ভব।
+> সম্পূর্ণ prompt-free চাইলে **Google Play**-এ publish করতে হবে।
 
 ---
 
@@ -221,12 +172,47 @@ Production-এ ১০০% rollout দিলে সব গ্রাহক normal 
 
 | সমস্যা | কারণ / সমাধান |
 |---|---|
-| update dialog আসে না | `versionCode` বাড়ানো হয়নি, বা Drive JSON-এর `versionCode` ছোট |
-| "Downloaded file টা APK নয়" | Drive link-এ file টা share করা নেই (Anyone with the link), অথবা ভুল file id |
-| Drive "quota exceeded" / virus warning | APK বড়/blocked হলে নিজের server বা GitHub Releases-এ APK রাখুন, শুধু `apkUrl` বদলান |
-| Installer খুলছে কিন্তু "Blocked" | গ্রাহককে Settings → Install unknown apps → allow করতে বলুন |
-| প্রতিবার check করতে চাই | `CHECK_INTERVAL_HOURS = 0` |
-| Play-তে update আসছে না | AAB **Publish** করা হয়নি, বা `versionCode` আগেরটার চেয়ে বড় নয়, বা device সেই track-এ নেই |
-| Play version-এ update dialog দেখাচ্ছে | ভুল — Play path হলে `InstallSource.isFromPlay()` true হয়, তখন dialog আসে না। একবার Play থেকে install করলে ঠিক হয়ে যাবে |
-| "Install unknown apps" পুরোপুরি বন্ধ চাই | শুধু **SECTION B (Play Store)** দিয়েই সম্ভব — এটা Android-এর security, কোড দিয়ে bypass হয় না |
+| Actions fail: `KEYSTORE_BASE64 secret সেট করা নেই` | ধাপ ৩ সম্পূর্ণ হয়নি |
+| `INSTALL_FAILED_UPDATE_INCOMPATIBLE` | নতুন keystore ব্যবহার হয়েছে। গ্রাহককে uninstall → reinstall করতে হবে (একবারই) |
+| Update dialog আসে না | `versionCode` বাড়ানো হয়নি। অথবা repo private |
+| APK download 404 | Repo private, বা Release এখনো তৈরি হয়নি |
+| "Downloaded file টা APK নয়" | `apkUrl` ভুল — Release-এ `SkyOTT.apk` attach হয়েছে কি না দেখুন |
+| Actions চলে কিন্তু release নেই | `permissions: contents: write` আছে কি না দেখুন |
+| Manifest পুরনো মনে হচ্ছে | cache-buster আছে; raw CDN ~৫ মিনিট cache করে — একটু অপেক্ষা করুন |
+| Installer "Blocked" দেখাচ্ছে | গ্রাহককে Settings → Install unknown apps → allow করতে বলুন |
 
+---
+
+## ফাইল-কোথায় কী
+
+| File | কাজ |
+|---|---|
+| `.github/workflows/build.yml` | build → Release → manifest (পুরো automation) |
+| `tools/create-keystore.ps1` | একবারের keystore তৈরি helper |
+| `update/update-manifest.json` | workflow নিজে আপডেট করে — হাতে এডিট করবেন না |
+| `app/build.gradle` | `versionCode` এখানে বাড়াবেন |
+| `data/update/UpdateConfig.kt` | manifest URL, check interval, Play force flag |
+| `data/update/UpdateChecker.kt` | নতুন version আছে কি না দেখে |
+| `data/update/ApkDownloader.kt` | APK download (progress সহ) |
+| `data/update/InstallHelper.kt` | installer খোলা + permission |
+| `data/update/DriveClient.kt` | HTTP client + Drive confirm-page handling |
+| `data/update/PlayUpdateManager.kt` | Play In-App Updates (prompt-free) |
+| `data/update/InstallSource.kt` | অ্যাপ Play থেকে এসেছে কি না detect |
+| `ui/update/UpdateDialog.kt` | update dialog + progress UI |
+
+---
+
+## দ্রুত রেফারেন্স (চিটশিট)
+
+```powershell
+# নতুন version ছাড়তে
+# 1. app/build.gradle-এ versionCode বাড়ান
+# 2. তারপর:
+git add -A; git commit -m "release: v1.2 (build 3)"; git push
+
+# Actions দেখতে
+start https://github.com/amritokumar68888/iptv/actions
+
+# Releases দেখতে
+start https://github.com/amritokumar68888/iptv/releases
+```

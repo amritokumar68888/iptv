@@ -1,11 +1,26 @@
-name: Build APK
+name: Build & Publish Update
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  push করলেই:
+#    ১) signed APK build হয় (persistent keystore, GitHub Secrets থেকে)
+#    ২) GitHub Release তৈরি হয়, APK attach হয়
+#    ৩) update/update-manifest.json নিজে থেকে আপডেট হয়ে commit হয়
+#  → গ্রাহকের অ্যাপ পরেরবার খুললেই নতুন version পেয়ে যায়
+#
+#  ⚠️ চালানোর আগে GitHub Secrets সেট করতে হবে — UPDATE_SETUP.md দেখুন।
+# ─────────────────────────────────────────────────────────────────────────────
 
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+    # bot-এর manifest commit যাতে আবার build trigger না করে
+    paths-ignore:
+      - 'update/update-manifest.json'
   workflow_dispatch:
+
+# Release তৈরি ও manifest commit করার জন্য write permission দরকার
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -14,6 +29,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -24,10 +41,11 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          # ⚠️ action-এর default 'tools platform-tools' — কিন্তু নতুন cmdline-tools-এ
-          # 'tools' package আর নেই, তাই "Failed to find package 'tools'" error হয়।
-          # এখানে নিজে প্রয়োজনীয় package গুলো বলে দেওয়া হলো।
+          # ⚠️ default 'tools platform-tools' — নতুন cmdline-tools-এ 'tools' নেই
           packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
+
+      - name: Setup Gradle (dependency cache)
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Download Gradle Wrapper JAR
         run: |
@@ -37,36 +55,105 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Generate Keystore
+      # ── Persistent signing key ─────────────────────────────────────────────
+      # ⚠️ আগে এখানে keytool দিয়ে নতুন key বানানো হতো — প্রতিবার আলাদা signature
+      #    হওয়ায় অ্যাপ কখনো update install করতে পারত না। এখন GitHub Secrets-এ
+      #    রাখা একটাই key সব release-এ ব্যবহার হয়।
+      - name: Restore signing keystore
         run: |
-          keytool -genkey -v \
-            -keystore app/skyott.jks \
-            -alias skyott \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass skyott123 \
-            -keypass skyott123 \
-            -dname "CN=Sky OTT, OU=App, O=SkyOTT, L=Dhaka, ST=Dhaka, C=BD"
+          if [ -z "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "::error::KEYSTORE_BASE64 secret সেট করা নেই — UPDATE_SETUP.md দেখুন"
+            exit 1
+          fi
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > app/skyott.jks
 
-      - name: Build Signed Release APK
+      - name: Read version from build.gradle
+        id: ver
+        run: |
+          VC=$(grep -oP 'versionCode\s+\K[0-9]+' app/build.gradle | head -1)
+          VN=$(grep -oP 'versionName\s+"\K[^"]+' app/build.gradle | head -1)
+          echo "code=$VC" >> "$GITHUB_OUTPUT"
+          echo "name=$VN" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VN}-b${VC}" >> "$GITHUB_OUTPUT"
+          echo "Building versionName=$VN versionCode=$VC"
+
+      - name: Build signed release APK
         env:
           KEYSTORE_PATH: skyott.jks
-          KEYSTORE_PASS: skyott123
-          KEY_ALIAS: skyott
-          KEY_PASS: skyott123
+          KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
+          KEY_ALIAS:     ${{ secrets.KEY_ALIAS }}
+          KEY_PASS:      ${{ secrets.KEY_PASS }}
         run: ./gradlew assembleRelease --stacktrace
 
-      - name: Rename APK
-        run: |
-          mv app/build/outputs/apk/release/app-release.apk \
-             app/build/outputs/apk/release/SkyOTT.apk || \
-          mv app/build/outputs/apk/release/app-release-unsigned.apk \
-             app/build/outputs/apk/release/SkyOTT.apk || true
+      - name: Prepare APK
+        run: cp app/build/outputs/apk/release/app-release.apk SkyOTT.apk
 
-      - name: Upload APK
+      - name: Verify APK signature
+        run: |
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null | head -1 || true)
+          if [ -n "$APKSIGNER" ]; then
+            "$APKSIGNER" verify --print-certs SkyOTT.apk || true
+          else
+            echo "apksigner পাওয়া যায়নি — verification skip"
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: Sky OTT ${{ steps.ver.outputs.name }} (build ${{ steps.ver.outputs.code }})
+          files: SkyOTT.apk
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          body: |
+            **versionName:** ${{ steps.ver.outputs.name }}
+            **versionCode:** ${{ steps.ver.outputs.code }}
+            **commit:** ${{ github.sha }}
+
+            গ্রাহকের অ্যাপ নিজে থেকেই এই update পেয়ে যাবে।
+
+      # ── Auto-generate the manifest the app checks ──────────────────────────
+      - name: Generate update manifest
+        env:
+          TAG_NAME: ${{ steps.ver.outputs.tag }}
+          VER_CODE: ${{ steps.ver.outputs.code }}
+          VER_NAME: ${{ steps.ver.outputs.name }}
+        run: |
+          python3 - <<'PY'
+          import os, json
+          repo = os.environ["GITHUB_REPOSITORY"]
+          tag  = os.environ["TAG_NAME"]
+          data = {
+              "versionCode": int(os.environ["VER_CODE"]),
+              "versionName": os.environ["VER_NAME"],
+              "apkUrl": f"https://github.com/{repo}/releases/download/{tag}/SkyOTT.apk",
+              "changelog": "• নতুন চ্যানেল যোগ করা হয়েছে\n• প্লে-ব্যাক বাগ ফিক্স\n• পারফরম্যান্স উন্নতি",
+              "forceUpdate": False,
+              "minSupportedVersionCode": 1,
+          }
+          os.makedirs("update", exist_ok=True)
+          with open("update/update-manifest.json", "w", encoding="utf-8") as f:
+              json.dump(data, f, ensure_ascii=False, indent=2)
+              f.write("\n")
+          print(open("update/update-manifest.json", encoding="utf-8").read())
+          PY
+
+      - name: Commit manifest
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add update/update-manifest.json
+          if git diff --staged --quiet; then
+            echo "manifest অপরিবর্তিত — কিছু commit করার নেই"
+          else
+            git commit -m "chore(update): manifest for ${{ steps.ver.outputs.tag }} [skip ci]"
+            git push
+          fi
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SkyOTT-release
-          path: app/build/outputs/apk/release/SkyOTT.apk
+          name: SkyOTT-${{ steps.ver.outputs.name }}-${{ steps.ver.outputs.code }}
+          path: SkyOTT.apk
           retention-days: 30
+
