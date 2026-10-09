@@ -55,6 +55,61 @@ flowchart TD
 
 ---
 
+## IP Block — কোন IP অ্যাপ চালাতে পারবে
+
+আগে IP টা কোডে **hardcoded** ছিল (`103.7.4.12`) — বদলাতে নতুন APK লাগত।
+এখন list টা **remote file** থেকে আসে, তাই **একাধিক IP** দিতে পারবেন আর
+নতুন APK ছাড়াই বদলাতে পারবেন।
+
+### File: `update/allowed-ips.txt`
+
+```
+103.7.4.12          # exact IP — শুধু এই IP allowed
+103.7.4.13          # ২য় IP (যত খুশি দিতে পারেন)
+27.147.190.5        # ৩য় IP
+192.168.1.*         # শেষে * দিলে ওই prefix-এর সব IP (range)
+# 1.2.3.4           # # দিয়ে comment — পড়া হয় না
+```
+
+| Format | মানে |
+|---|---|
+| `103.7.4.12` | শুধু এই exact IP |
+| `103.7.4.*` | `103.7.4.0` – `103.7.4.255` সব IP |
+| `# ...` | comment, বাদ যাবে |
+| `1.2.3.4, 5.6.7.8` | এক লাইনে কমা দিয়ে একাধিক (চলবে) |
+
+### বদলাতে ২ ধাপ (৩০ সেকেন্ড)
+
+**১.** GitHub-এ file টা খুলুন → **✏️ পেন্সিল** আইকন → IP বদলান
+```
+https://github.com/amritokumar68888/iptv/blob/main/update/allowed-ips.txt
+```
+> git/push জানার দরকার নেই — browser-এ ক্লিক করে Save.
+
+**২.** **Commit changes** চাপুন
+
+ব্যস। গ্রাহক পরেরবার অ্যাপ খুললেই নতুন list ব্যবহার হবে।
+
+> 💡 কোনো নোটিশ/APK/version bump লাগে না। এটাই এর সুবিধা — জরুরি
+> অবস্থায় গ্রাহকের IP বদলাতে হলে ৩০ সেকেন্ড।
+
+> ⚠️ অ্যাপে টা list টা **cache** করে রাখে — network fail করলেও সর্বশেষ
+> কাজ করা list টাই চলবে। File টা **খালি** করে দিলে কেউ ঢুকতে পারবে না।
+
+### Google Drive-এ রাখতে চাইলে
+
+`data/ip/IpAllowList.kt`-এ এক লাইন বদলান:
+
+```kotlin
+const val IPS_URL_DRIVE_OVERRIDE =
+    "https://drive.google.com/uc?export=download&id=YOUR_ALLOWED_IPS_FILE_ID"
+```
+
+> File টা অবশ্যই **"Anyone with the link"** করে share করতে হবে, নাহলে
+> anonymous fetch fail করবে।
+
+---
+
 ## ⚠️ আগে জেনে নিন — ২টা জরুরি কথা
 
 ### ১. এই অ্যাপে update সিস্টেম নেই — তাই প্রথমবার manually দিতে হবে
@@ -209,6 +264,9 @@ git push
 | Actions চলে কিন্তু release নেই | `permissions: contents: write` আছে কি না দেখুন |
 | Manifest পুরনো মনে হচ্ছে | cache-buster আছে; raw CDN ~৫ মিনিট cache করে — একটু অপেক্ষা করুন |
 | Installer "Blocked" দেখাচ্ছে | গ্রাহককে Settings → Install unknown apps → allow করতে বলুন |
+| গ্রাহকের IP allowed তাও block | `update/allowed-ips.txt`-এ IP টা যোগ করে commit করুন; গ্রাহক অ্যাপ খুললে / Retry চাপলে ঠিক হবে |
+| IP list-এ বদল ধরা পড়ছে না | app টা reopen করুন (বা Retry) — অ্যাপ খোলার সময় list refresh হয় |
+| সবাই block হয়ে গেছে | `allowed-ips.txt` ফাঁকা/ভুল হয়েছে কি না দেখুন — সর্বশেষ কাজ করা list cache-এ আছে, reopen করলেই ফিরবে |
 
 ---
 
@@ -220,6 +278,8 @@ git push
 | `tools/create-keystore.ps1` | একবারের keystore তৈরি helper |
 | `update/update-manifest.json` | workflow নিজে আপডেট করে — হাতে এডিট করবেন না |
 | `app/build.gradle` | `versionCode` এখানে বাড়াবেন |
+| `update/allowed-ips.txt` | **কোন IP অ্যাপ চালাতে পারবে** — এটা এডিট করলেই IP বদলায় |
+| `data/ip/IpAllowList.kt` | remote IP list পড়/match করে |
 | `data/update/UpdateConfig.kt` | manifest URL, check interval, Play force flag |
 | `data/update/UpdateChecker.kt` | নতুন version আছে কি না দেখে |
 | `data/update/ApkDownloader.kt` | APK download (progress সহ) |

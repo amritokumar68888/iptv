@@ -118,7 +118,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun checkIpInBackground() {
         lifecycleScope.launch {
-            val allowed = IpChecker.isAllowed()
+            // রিমোট IP list নামাও (fail করলে cache/bundled default চলবে)
+            IpChecker.refreshAllowList(this@MainActivity)
+
+            val allowed = IpChecker.isAllowed(this@MainActivity)
             if (!allowed) {
                 val ip = IpChecker.getPublicIp() ?: "Unknown"
                 showIpBlockedDialog(ip)
@@ -172,7 +175,10 @@ class MainActivity : AppCompatActivity() {
             progressBar.visibility = View.VISIBLE
             btnRetry.isEnabled = false
             lifecycleScope.launch {
-                val allowed = IpChecker.isAllowed()
+                // Retry চাপলে IP list আবার নামাও — Drive/GitHub-এ বদলালেই ধরা পড়বে
+                IpChecker.refreshAllowList(this@MainActivity)
+
+                val allowed = IpChecker.isAllowed(this@MainActivity)
                 val ip      = IpChecker.getPublicIp() ?: "Unknown"
                 progressBar.visibility = View.GONE
                 btnRetry.isEnabled = true
@@ -186,7 +192,8 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     dialog.findViewById<TextView>(R.id.tvCurrentIp).text = "Your IP: $ip"
                     dialog.findViewById<TextView>(R.id.tvMessage).text =
-                        "এই IP থেকে access permitted নয়।\nAllowed IP: ${IpChecker.ALLOWED_IP}"
+                        "এই IP থেকে access permitted নয়।\nAllowed IP: " +
+                        IpChecker.describeAllowed(this@MainActivity)
                 }
             }
         }
