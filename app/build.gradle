@@ -14,8 +14,8 @@ android {
         targetSdk 34
         // ⚠️ IMPORTANT: প্রতিবার নতুন version ছাড়ার সময় versionCode ১ করে বাড়ান।
         // In-app auto update এই versionCode দিয়েই compare করে (UPDATE_SETUP.md দেখুন)।
-        versionCode 6
-        versionName "1.5"
+        versionCode 7
+        versionName "1.6"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 

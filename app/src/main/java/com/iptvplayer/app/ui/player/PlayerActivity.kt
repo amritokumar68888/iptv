@@ -24,6 +24,7 @@ import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.iptvplayer.app.R
+import com.iptvplayer.app.data.health.StreamHealthChecker
 import com.iptvplayer.app.data.model.Channel
 import com.iptvplayer.app.databinding.ActivityPlayerBinding
 import com.iptvplayer.app.ui.channels.ChannelListAdapter
@@ -46,6 +47,12 @@ class PlayerActivity : AppCompatActivity() {
 
     private lateinit var overlayAdapter: ChannelListAdapter
     private var overlayFocusedIndex = 0  // currently highlighted item in overlay list
+
+    // ── Auto-skip (dead channel bypass) ───────────────────────────────────────
+    // Stream fail করলে নিজে থেকেই পরের channel-এ যায়। কিন্তু সবার শেষে গিয়ে
+    // আবার ঘুরতে থাকে (infinite loop) — তাই কয়েকবার চেষ্টা করেই থেমে যায়।
+    private var consecutiveFailures = 0
+    private val maxAutoSkips get() = minOf(channelList.size, 15)
 
     private val hideHandler = Handler(Looper.getMainLooper())
     private val hideRunnable = Runnable { hideControls() }
@@ -316,8 +323,24 @@ class PlayerActivity : AppCompatActivity() {
         switchToChannel((currentIndex + direction + channelList.size) % channelList.size)
     }
 
+    /**
+     * পরের এমন index যেটা cache অনুযায়ী dead নয়।
+     * সব dead হলে -1 (তখন error message দেখানো হয়)।
+     */
+    private fun nextPlayableIndex(from: Int): Int {
+        if (channelList.isEmpty()) return -1
+        for (step in 1 until channelList.size) {
+            val idx = (from + step) % channelList.size
+            if (!StreamHealthChecker.knownDead(this, channelList[idx].url)) return idx
+        }
+        return -1
+    }
+
     private fun switchToChannel(index: Int) {
         if (index < 0 || index >= channelList.size) return
+
+        // আগের channel-এর URL মরে গিয়েছিল কিনা দেখা হয়ে গেছে;
+        // নতুন channel শুরুর আগে error message মুছে দাও
         currentIndex = index
         val ch = channelList[index]
         channelName = ch.name; channelUrl = ch.url
@@ -388,13 +411,38 @@ class PlayerActivity : AppCompatActivity() {
                     override fun onPlaybackStateChanged(state: Int) {
                         binding.progressBuffering.visibility =
                             if (state == Player.STATE_BUFFERING) View.VISIBLE else View.GONE
-                        if (state == Player.STATE_READY)
+                        if (state == Player.STATE_READY) {
                             binding.btnPlayPause.setImageResource(R.drawable.ic_pause)
+                            // ছবি এসেছে মানে stream কাজ করছে
+                            consecutiveFailures = 0
+                            binding.tvError.visibility = View.GONE
+                            StreamHealthChecker.markAlive(this@PlayerActivity, url)
+                        }
                     }
+
                     override fun onPlayerError(error: PlaybackException) {
                         binding.progressBuffering.visibility = View.GONE
+
+                        // channel টা dead — cache-এ লেখো যাতে list-এ আর না দেখায়
+                        StreamHealthChecker.markDead(this@PlayerActivity, url)
+                        consecutiveFailures++
+
+                        if (consecutiveFailures <= maxAutoSkips && channelList.size > 1) {
+                            val next = nextPlayableIndex(currentIndex)
+                            if (next >= 0) {
+                                Toast.makeText(
+                                    this@PlayerActivity,
+                                    getString(R.string.skipping_dead_channel, channelName),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                switchToChannel(next)
+                                return
+                            }
+                        }
+
+                        // এতগুলো channel পরপর fail = playlist-ই হয়তো কাজ করছে না
                         binding.tvError.visibility = View.VISIBLE
-                        binding.tvError.text = getString(R.string.error_playback, error.message)
+                        binding.tvError.text = getString(R.string.all_channels_failed)
                         showControls()
                         hideHandler.removeCallbacks(hideRunnable)
                     }

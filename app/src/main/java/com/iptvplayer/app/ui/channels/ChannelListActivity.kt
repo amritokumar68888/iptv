@@ -14,11 +14,13 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.iptvplayer.app.R
+import com.iptvplayer.app.data.health.StreamHealthChecker
 import com.iptvplayer.app.data.model.Channel
 import com.iptvplayer.app.data.parser.M3uParser
 import com.iptvplayer.app.databinding.ActivityChannelListBinding
 import com.iptvplayer.app.ui.player.PlayerActivity
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -43,6 +45,11 @@ class ChannelListActivity : AppCompatActivity() {
     private var isSearchVisible = false
     private var allChannels: List<Channel> = emptyList()
     private var channelList: List<Channel> = emptyList()
+
+    // Remote health check (dead channel বাদ দেওয়ার জন্য)
+    private var healthJob: Job? = null
+    private val hiddenUrls = mutableSetOf<String>()   // যেগুলো dead পাওয়া গেছে / cache-এ dead
+    private var currentQuery = ""
 
     // Remote navigation focus index
     private var focusedIndex = 0
@@ -164,18 +171,80 @@ class ChannelListActivity : AppCompatActivity() {
         binding.etSearch.text.clear()
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(binding.etSearch.windowToken, 0)
-        showChannels(allChannels)
+        // সরাসরি allChannels দেখালে dead channel ফিরে আসত — তাই filter দিয়ে যাও
+        filterChannels("")
     }
 
     private fun filterChannels(query: String) {
-        val filtered = if (query.isEmpty()) allChannels
+        currentQuery = query
+        val base = if (query.isEmpty()) allChannels
         else allChannels.filter { it.name.contains(query, ignoreCase = true) }
+        val filtered = base.filterNot { it.url in hiddenUrls }
         channelList = filtered
         focusedIndex = 0
         listAdapter.setFocused(0)
         showChannels(filtered)
         if (filtered.isEmpty() && query.isNotEmpty()) {
             binding.tvEmpty.text = "\"$query\" পাওয়া যায়নি"
+        }
+    }
+
+    // ── Stream health check (dead channel বাদ) ────────────────────────────────
+
+    /**
+     * List দেখানোর আগে/পরে dead channel ছেঁকে বাদ দেয়।
+     *
+     *  ১) cache-এ যেগুলো dead লেখা আছে — সাথে সাথে বাদ
+     *  ২) বাকিগুলো background-এ check হয়; যেই fail করে সেই সাথে বাদ পড়ে
+     */
+    private fun applyHealthFilterAndVerify() {
+        if (allChannels.isEmpty()) return
+
+        // ১) আগে থেকে জানা dead গুলো
+        val knownDead = allChannels.filter { StreamHealthChecker.knownDead(this, it.url) }
+        if (knownDead.isNotEmpty()) {
+            hiddenUrls.addAll(knownDead.map { it.url })
+            filterChannels(currentQuery)
+        }
+
+        // ২) নতুনগুলো check করো
+        healthJob?.cancel()
+        val toCheck = allChannels.filterNot { it.url in hiddenUrls }
+        if (toCheck.isEmpty()) return
+
+        val total = minOf(toCheck.size, StreamHealthChecker.MAX_CHECKS)
+        binding.tvChecking.visibility = View.VISIBLE
+        binding.tvChecking.text = getString(R.string.checking_streams, 0, total)
+
+        healthJob = lifecycleScope.launch {
+            val dead = StreamHealthChecker.verifyAll(
+                context = this@ChannelListActivity,
+                channels = toCheck
+            ) { checked, all, deadChannel ->
+                withContext(Dispatchers.Main) {
+                    binding.tvChecking.text = getString(R.string.checking_streams, checked, all)
+
+                    if (StreamHealthChecker.knownDead(this@ChannelListActivity, deadChannel.url)) {
+                        hiddenUrls.add(deadChannel.url)
+                        filterChannels(currentQuery)
+                    }
+                }
+            }
+
+            withContext(Dispatchers.Main) {
+                hiddenUrls.addAll(dead.map { it.url })
+                filterChannels(currentQuery)
+
+                val working = allChannels.count { it.url !in hiddenUrls }
+                if (working == 0) {
+                    binding.tvChecking.text = getString(R.string.no_working_channels)
+                } else if (dead.isEmpty()) {
+                    binding.tvChecking.visibility = View.GONE
+                } else {
+                    binding.tvChecking.text =
+                        getString(R.string.streams_checked, working, allChannels.size)
+                }
+            }
         }
     }
 
@@ -253,11 +322,16 @@ class ChannelListActivity : AppCompatActivity() {
                     }
                     else -> parsed
                 }
+                hiddenUrls.clear()
+                currentQuery = ""
                 channelList = allChannels
                 focusedIndex = 0
 
                 binding.progressBar.visibility = View.GONE
                 showChannels(channelList)
+
+                // dead channel গুলো background-এ বাদ দাও
+                applyHealthFilterAndVerify()
 
             } catch (e: Exception) {
                 binding.progressBar.visibility = View.GONE

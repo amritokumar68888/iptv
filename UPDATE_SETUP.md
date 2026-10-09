@@ -145,6 +145,51 @@ const val IPS_URL_FALLBACK =
 
 ---
 
+## Dead Channel — স্বয়ংক্রিয়ভাবে বাদ দেওয়া
+
+Playlist-এ প্রায়ই **dead / offline / ভুল URL** থাকে। এখন দুটো স্তরে সামলানো হয়:
+
+| কোথায় | কী হয় |
+|---|---|
+| **Channel list** | যে channel কাজ করে না, সেটা list থেকে **বাদ পড়ে** |
+| **Player** | stream fail করলে **নিজে থেকেই পরের channel-এ** চলে যায় |
+
+### কীভাবে কাজ করে
+
+```
+১) Cache check  — আগে dead পাওয়া URL সাথে সাথে বাদ (list খোলার সাথে সাথে)
+২) Background   — বাকিগুলো ৮টা করে একসাথে check হয় (HEAD, দরকার হলে GET)
+৩) যেটা fail করে → list থেকে বাদ, cache-এ "dead" লেখা হয়
+৪) Player-এ error → ওই channel বাদ, পরের working channel-এ auto switch
+```
+
+Status line-এ দেখা যায়: `⏳ Channel যাচাই: 12/48` → শেষে `✓ 41/48 channel working`
+
+### নিরাপত্তা (fail-safe)
+
+| পরিস্থিতি | কী হবে |
+|---|---|
+| Internet নেই | কোনো channel-ই বাদ যাবে না (check fail = নীরব skip) |
+| সার্ভার আবার up হলো | **৩০ মিনিট পর** আবার check হয়ে live হলে ফিরে আসবে |
+| সব channel fail | `কোনো channel চলছে না` message — infinite loop নেই (সর্বোচ্চ ১৫টা চেষ্টা) |
+| Playlist বড় (>২৫০) | প্রথম ২৫০টা check হয়, বাকিগুলো অপরিবর্তিত থাকে |
+
+> 💡 **Cache-এর মেয়াদ:** live = ৬ ঘণ্টা, dead = ৩০ মিনিট।
+> তাই একটা channel ভুলে বাদ পড়লেও সেটা স্থায়ী নয়।
+>
+> ⚠️ **Dead খোঁজা হচ্ছে stream-এর actual response দিয়ে** — শুধু URL দেখে নয়।
+> কিছু সার্ভার HEAD সাপোর্ট করে না, তাই প্রথম কয়েক KB GET করেও দেখা হয়।
+
+### ফাইল
+
+| File | কাজ |
+|---|---|
+| `data/health/StreamHealthChecker.kt` | URL check + dead/live cache (TTL সহ) |
+| `ui/channels/ChannelListActivity.kt` | cache-dead বাদ + background check + progress |
+| `ui/player/PlayerActivity.kt` | error হলে mark-dead + auto next channel |
+
+---
+
 ## ⚠️ আগে জেনে নিন — ২টা জরুরি কথা
 
 ### ১. এই অ্যাপে update সিস্টেম নেই — তাই প্রথমবার manually দিতে হবে

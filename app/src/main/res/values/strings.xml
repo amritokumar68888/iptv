@@ -69,4 +69,11 @@
     <string name="checking_update">⏳ Checking for update…</string>
     <string name="already_latest">✓ Latest version</string>
     <string name="check_failed">✗ Update check failed: %1$s</string>
+
+    <!-- Dead-channel handling (auto skip / auto filter) -->
+    <string name="skipping_dead_channel">"%1$s" working না — পরের channel…</string>
+    <string name="all_channels_failed">কোনো channel চলছে না।\nInternet connection বা playlist যাচাই করুন।</string>
+    <string name="checking_streams">⏳ Channel যাচাই: %1$d/%2$d</string>
+    <string name="streams_checked">✓ %1$d/%2$d channel working</string>
+    <string name="no_working_channels">কোনো working channel পাওয়া যায়নি</string>
 </resources>
