@@ -1,0 +1,8 @@
+{
+  "versionCode": 2,
+  "versionName": "1.1",
+  "apkUrl": "https://drive.google.com/uc?export=download&id=YOUR_APK_FILE_ID",
+  "changelog": "• নতুন চ্যানেল যোগ করা হয়েছে\n• প্লে-ব্যাক বাগ ফিক্স\n• পারফরম্যান্স উন্নতি",
+  "forceUpdate": false,
+  "minSupportedVersionCode": 1
+}

@@ -3,10 +3,20 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- In-app update: APK install করার জন্য -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- TV support -->
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
+
+    <!-- Play In-App Updates-এর জন্য Play Store app দরকার (Android 11+ visibility) -->
+    <queries>
+        <intent>
+            <action android:name="com.google.android.play.core.install.BIND_UPDATE_SERVICE" />
+            <data android:scheme="package" />
+        </intent>
+    </queries>
 
     <application
         android:allowBackup="true"
@@ -46,6 +56,17 @@
             android:screenOrientation="landscape"
             android:supportsPictureInPicture="true"
             android:theme="@style/Theme.IPTVPlayer.Player" />
+
+        <!-- Update APK installer-এ পাঠানোর জন্য FileProvider -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 

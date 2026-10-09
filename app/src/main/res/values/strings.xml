@@ -46,4 +46,20 @@
     <string name="nav_channels">Channels</string>
     <string name="nav_favorites">Favorites</string>
     <string name="nav_search">Search</string>
+
+    <!-- In-app update -->
+    <string name="update_available">Update Available</string>
+    <string name="update_version">New version %1$s (build %2$d)</string>
+    <string name="whats_new">What\'s New</string>
+    <string name="update_no_changelog">No changelog provided.</string>
+    <string name="update_now">Update Now</string>
+    <string name="later">Later</string>
+    <string name="retry">Retry</string>
+    <string name="update_downloading">Downloading… %1$d%%</string>
+    <string name="update_downloaded_mb">Downloading… %1$d MB</string>
+    <string name="update_installing">Download complete — opening installer…</string>
+    <string name="update_failed">Update failed: %1$s</string>
+
+    <!-- Play store update (no prompt) -->
+    <string name="update_ready">Update downloaded — will install now</string>
 </resources>

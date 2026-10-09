@@ -23,6 +23,11 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # ⚠️ action-এর default 'tools platform-tools' — কিন্তু নতুন cmdline-tools-এ
+          # 'tools' package আর নেই, তাই "Failed to find package 'tools'" error হয়।
+          # এখানে নিজে প্রয়োজনীয় package গুলো বলে দেওয়া হলো।
+          packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
 
       - name: Download Gradle Wrapper JAR
         run: |

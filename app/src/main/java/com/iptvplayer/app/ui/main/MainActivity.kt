@@ -13,21 +13,32 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.iptvplayer.app.R
+import com.iptvplayer.app.data.update.InstallSource
+import com.iptvplayer.app.data.update.PlayUpdateManager
+import com.iptvplayer.app.data.update.UpdateChecker
+import com.iptvplayer.app.data.update.UpdateConfig
 import com.iptvplayer.app.databinding.ActivityMainBinding
 import com.iptvplayer.app.ui.channels.ChannelListActivity
 import com.iptvplayer.app.ui.channels.RecentManager
+import com.iptvplayer.app.ui.update.UpdateDialog
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var prefs: SharedPreferences
+    private lateinit var playUpdateManager: PlayUpdateManager
+
+    companion object {
+        private const val PLAY_UPDATE_REQUEST = 1001
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        playUpdateManager = PlayUpdateManager(this)
 
         // Setup UI immediately — don't block on IP check
         setupUi()
@@ -37,6 +48,46 @@ class MainActivity : AppCompatActivity() {
 
         // Google Drive update in background
         checkForUpdate()
+
+        // App version update check in background
+        checkForAppUpdate()
+    }
+
+    // ── App (APK) Update ──────────────────────────────────────────────────────
+
+    private fun checkForAppUpdate() {
+        if (!UpdateConfig.CHECK_ON_START) return
+
+        // ── Play Store থেকে install করা app ──────────────────────────────────
+        // normal app-এর মতো update — কোনো "Install unknown apps" prompt নেই
+        if (InstallSource.isFromPlay(this)) {
+            playUpdateManager.onProgress = { done, total ->
+                val pct = if (total > 0) ((done * 100) / total).toInt() else 0
+                binding.tvUpdateStatus.visibility = View.VISIBLE
+                binding.tvUpdateStatus.text =
+                    getString(R.string.update_downloading, pct)
+            }
+            playUpdateManager.onDownloaded = {
+                binding.tvUpdateStatus.text = getString(R.string.update_ready)
+            }
+            playUpdateManager.checkAndStart(
+                PLAY_UPDATE_REQUEST,
+                UpdateConfig.PLAY_FORCE_UPDATE
+            )
+            return
+        }
+
+        // ── Sideload করা app → Drive-based updater ──────────────────────────
+        // (গ্রাহককে একবার "Install unknown apps" allow করতে হবে)
+        lifecycleScope.launch {
+            when (val result = UpdateChecker.checkIfDue(this@MainActivity)) {
+                is UpdateChecker.Result.Available ->
+                    UpdateDialog(this@MainActivity)
+                        .show(result.info, result.forced, lifecycleScope)
+                // UpToDate / Failed → চুপচাপ ignore (গ্রাহককে বিরক্ত করব না)
+                else -> Unit
+            }
+        }
     }
 
     // ── UI Setup (always runs first) ──────────────────────────────────────────
@@ -147,6 +198,13 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         updateCounts()
+        // Play update মাঝপথে থেমে থাকলে/ডাউনলোড শেষ হলে সেটা handle করে
+        playUpdateManager.resumeIfPending()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        playUpdateManager.destroy()
     }
 
     private fun updateCounts() {

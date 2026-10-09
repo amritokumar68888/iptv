@@ -12,6 +12,8 @@ android {
         applicationId "com.iptvplayer.app"
         minSdk 21
         targetSdk 34
+        // ⚠️ IMPORTANT: প্রতিবার নতুন version ছাড়ার সময় versionCode ১ করে বাড়ান।
+        // In-app auto update এই versionCode দিয়েই compare করে (UPDATE_SETUP.md দেখুন)।
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -73,6 +75,9 @@ dependencies {
 
     // OkHttp
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+
+    // Google Play In-App Updates (normal app-এর মতো update, কোনো prompt নেই)
+    implementation 'com.google.android.play:app-update:2.1.0'
 
     // Coroutines
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
