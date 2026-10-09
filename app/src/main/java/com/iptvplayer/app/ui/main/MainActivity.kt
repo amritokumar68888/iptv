@@ -4,6 +4,7 @@ import android.app.Dialog
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.Window
 import android.widget.Button
@@ -13,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.iptvplayer.app.R
+import com.iptvplayer.app.data.update.AppVersion
 import com.iptvplayer.app.data.update.InstallSource
 import com.iptvplayer.app.data.update.PlayUpdateManager
 import com.iptvplayer.app.data.update.UpdateChecker
@@ -30,6 +32,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var playUpdateManager: PlayUpdateManager
 
     companion object {
+        private const val TAG = "SkyOTT-Updater"
         private const val PLAY_UPDATE_REQUEST = 1001
     }
 
@@ -58,18 +61,10 @@ class MainActivity : AppCompatActivity() {
     private fun checkForAppUpdate() {
         if (!UpdateConfig.CHECK_ON_START) return
 
-        // ── Play Store থেকে install করা app ──────────────────────────────────
+        // ── Play Store থেকে install করা app → Play In-App Updates ────────────
         // normal app-এর মতো update — কোনো "Install unknown apps" prompt নেই
         if (InstallSource.isFromPlay(this)) {
-            playUpdateManager.onProgress = { done, total ->
-                val pct = if (total > 0) ((done * 100) / total).toInt() else 0
-                binding.tvUpdateStatus.visibility = View.VISIBLE
-                binding.tvUpdateStatus.text =
-                    getString(R.string.update_downloading, pct)
-            }
-            playUpdateManager.onDownloaded = {
-                binding.tvUpdateStatus.text = getString(R.string.update_ready)
-            }
+            setUpPlayCallbacks()
             playUpdateManager.checkAndStart(
                 PLAY_UPDATE_REQUEST,
                 UpdateConfig.PLAY_FORCE_UPDATE
@@ -77,16 +72,92 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // ── Sideload করা app → Drive-based updater ──────────────────────────
+        // ── Sideload করা app → manifest-based updater ────────────────────────
         // (গ্রাহককে একবার "Install unknown apps" allow করতে হবে)
         lifecycleScope.launch {
+            // Auto-check-এ throttle মানা হয় (বারবার network call এড়াতে)
             when (val result = UpdateChecker.checkIfDue(this@MainActivity)) {
-                is UpdateChecker.Result.Available ->
-                    UpdateDialog(this@MainActivity)
-                        .show(result.info, result.forced, lifecycleScope)
-                // UpToDate / Failed → চুপচাপ ignore (গ্রাহককে বিরক্ত করব না)
-                else -> Unit
+                is UpdateChecker.Result.Available -> showUpdateDialog(result)
+                UpdateChecker.Result.UpToDate ->
+                    setStatus(getString(R.string.already_latest), 4000)
+                is UpdateChecker.Result.Failed ->
+                    // আগে এখানে চুপচাপ ignore করা হতো — এখন দেখা যাবে
+                    setStatus(getString(R.string.check_failed, result.message))
             }
+        }
+    }
+
+    /** গ্রাহক নিজে "Check for update" চাপলে — throttle ছাড়া সবসময় check করে। */
+    private fun manualUpdateCheck() {
+        if (InstallSource.isFromPlay(this)) {
+            setUpPlayCallbacks()
+            setStatus(getString(R.string.checking_update))
+            playUpdateManager.checkAndStart(
+                PLAY_UPDATE_REQUEST,
+                UpdateConfig.PLAY_FORCE_UPDATE
+            )
+            return
+        }
+        lifecycleScope.launch {
+            setStatus(getString(R.string.checking_update))
+            when (val result = UpdateChecker.check(this@MainActivity)) {
+                is UpdateChecker.Result.Available -> showUpdateDialog(result)
+                UpdateChecker.Result.UpToDate ->
+                    setStatus(getString(R.string.already_latest), 4000)
+                is UpdateChecker.Result.Failed ->
+                    setStatus(getString(R.string.check_failed, result.message))
+            }
+        }
+    }
+
+    private fun setUpPlayCallbacks() {
+        playUpdateManager.onProgress = { done, total ->
+            val pct = if (total > 0) ((done * 100) / total).toInt() else 0
+            setStatus(getString(R.string.update_downloading, pct))
+        }
+        playUpdateManager.onDownloaded = {
+            setStatus(getString(R.string.update_ready))
+        }
+    }
+
+    private fun showUpdateDialog(available: UpdateChecker.Result.Available) {
+        Log.i(
+            TAG,
+            "Update available: v${available.info.versionName} " +
+                    "(build ${available.info.versionCode}) forced=${available.forced}"
+        )
+        if (isFinishing || isDestroyed) return
+        try {
+            UpdateDialog(this).show(available.info, available.forced, lifecycleScope)
+        } catch (e: Exception) {
+            // Dialog দেখাতে ব্যর্থ হলেও যেন app crash না করে
+            Log.e(TAG, "Update dialog failed", e)
+            setStatus(getString(R.string.check_failed, e.message ?: "dialog error"))
+        }
+    }
+
+    /**
+     * Install করা version দেখায় — কোন build চলছে তা জানার একমাত্র উপায়।
+     * (update check কাজ করছে কি না বোঝার জন্য এটাই সবচেয়ে দরকারি তথ্য।)
+     */
+    private fun showAppVersion() {
+        val v = getString(
+            R.string.app_version,
+            AppVersion.name(this),
+            AppVersion.code(this)
+        )
+        binding.tvAppVersion.text = v
+        Log.i(TAG, "Installed version: $v")
+    }
+
+    /** Update-check এর status দেখায় (autoHideMs > 0 হলে কিছুক্ষণ পর লুকায়)। */
+    private fun setStatus(text: String, autoHideMs: Long = 0) {
+        binding.tvCheckResult.visibility = View.VISIBLE
+        binding.tvCheckResult.text = text
+        if (autoHideMs > 0) {
+            binding.tvCheckResult.postDelayed({
+                binding.tvCheckResult.visibility = View.GONE
+            }, autoHideMs)
         }
     }
 
@@ -94,6 +165,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupUi() {
         updateCounts()
+        showAppVersion()
+
+        binding.rowCheckUpdate.setOnClickListener { manualUpdateCheck() }
 
         binding.rowAllChannels.setOnClickListener {
             val url = M3uUpdater.getM3uSource(this)

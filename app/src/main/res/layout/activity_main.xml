@@ -168,6 +168,55 @@
         android:layout_height="1dp"
         android:background="@color/colorDivider" />
 
+    <!-- App version + manual update check -->
+    <LinearLayout
+        android:id="@+id/rowCheckUpdate"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/bg_row_selector"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="20dp">
+
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_marginEnd="12dp"
+            android:src="@drawable/ic_refresh"
+            android:tint="@color/colorOrange" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/check_for_update"
+            android:textColor="@color/colorChannelName"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/tvAppVersion"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/colorSubText"
+            android:textSize="12sp" />
+
+    </LinearLayout>
+
+    <!-- Update-check result (own line, so it never clashes with the playlist status) -->
+    <TextView
+        android:id="@+id/tvCheckResult"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/colorSurface"
+        android:gravity="center"
+        android:padding="8dp"
+        android:textColor="@color/colorOrange"
+        android:textSize="12sp"
+        android:visibility="gone" />
+
     <!-- Update status bar -->
     <TextView
         android:id="@+id/tvUpdateStatus"

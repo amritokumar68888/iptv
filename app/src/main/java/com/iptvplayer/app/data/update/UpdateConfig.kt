@@ -52,7 +52,7 @@ object UpdateConfig {
     const val MANIFEST_URL_FALLBACK = ""
 
     /** কত ঘণ্টা পর পর নিজে থেকে update check করবে (0 = প্রতিবার app খুললে) */
-    const val CHECK_INTERVAL_HOURS = 6
+    const val CHECK_INTERVAL_HOURS = 1
 
     /** App খোলার সাথে সাথে check করবে কি না */
     const val CHECK_ON_START = true
