@@ -47,6 +47,7 @@ class ChannelListActivity : AppCompatActivity() {
         const val SORT_NAME_ASC  = "name_asc"
         const val SORT_NAME_DESC = "name_desc"
         const val SORT_GROUP     = "group"
+        const val SORT_DEFAULT   = "default"
     }
 
     private lateinit var binding: ActivityChannelListBinding
@@ -65,8 +66,8 @@ class ChannelListActivity : AppCompatActivity() {
     private var focusedIndex = 0
 
     // ── Sort / group filter / toolbar focus ─────────────────────────────────
-    private enum class SortMode { NAME_ASC, NAME_DESC, GROUP }
-    private var sortMode = SortMode.NAME_ASC
+    private enum class SortMode { DEFAULT, NAME_ASC, NAME_DESC, GROUP }
+    private var sortMode = SortMode.DEFAULT
     private var groupFilter: String? = null          // null = সব group
     private var baseTitle: String = ""
 
@@ -100,7 +101,8 @@ class ChannelListActivity : AppCompatActivity() {
         sortMode = when (intent.getStringExtra(EXTRA_SORT)) {
             SORT_NAME_DESC -> SortMode.NAME_DESC
             SORT_GROUP     -> SortMode.GROUP
-            else           -> SortMode.NAME_ASC
+            SORT_NAME_ASC  -> SortMode.NAME_ASC
+            else           -> SortMode.DEFAULT
         }
 
         baseTitle = title
@@ -287,11 +289,12 @@ class ChannelListActivity : AppCompatActivity() {
 
     private fun showSortDialog() {
         val labels = arrayOf(
+            getString(R.string.sort_default),
             getString(R.string.sort_name_asc),
             getString(R.string.sort_name_desc),
             getString(R.string.sort_group)
         )
-        val modes = arrayOf(SortMode.NAME_ASC, SortMode.NAME_DESC, SortMode.GROUP)
+        val modes = arrayOf(SortMode.DEFAULT, SortMode.NAME_ASC, SortMode.NAME_DESC, SortMode.GROUP)
         val checked = modes.indexOf(sortMode)
 
         AlertDialog.Builder(this)
@@ -325,6 +328,7 @@ class ChannelListActivity : AppCompatActivity() {
     }
 
     private fun sorted(list: List<Channel>): List<Channel> = when (sortMode) {
+        SortMode.DEFAULT   -> list
         SortMode.NAME_ASC  -> list.sortedBy { it.name.lowercase() }
         SortMode.NAME_DESC -> list.sortedByDescending { it.name.lowercase() }
         SortMode.GROUP     -> list.sortedWith(

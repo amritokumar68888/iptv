@@ -17,6 +17,7 @@
 
     <!-- Sort / filter / menu -->
     <string name="sort_by">Sort by</string>
+    <string name="sort_default">Default group</string>
     <string name="sort_name_asc">Name (A → Z)</string>
     <string name="sort_name_desc">Name (Z → A)</string>
     <string name="sort_group">Group</string>

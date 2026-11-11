@@ -288,11 +288,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun showMainSortDialog() {
         val labels = arrayOf(
+            getString(R.string.sort_default),
             getString(R.string.sort_name_asc),
             getString(R.string.sort_name_desc),
             getString(R.string.sort_group)
         )
         val modes = arrayOf(
+            ChannelListActivity.SORT_DEFAULT,
             ChannelListActivity.SORT_NAME_ASC,
             ChannelListActivity.SORT_NAME_DESC,
             ChannelListActivity.SORT_GROUP
