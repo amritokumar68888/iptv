@@ -494,10 +494,8 @@ class ChannelListActivity : AppCompatActivity() {
                 }
                 hiddenUrls.clear()
                 currentQuery = ""
-                // Default filter = প্রথম group (user চাইলে dropdown থেকে বদলাতে পারবে)
-                groupFilter = if (mode == MODE_ALL) {
-                    allChannels.map { it.group }.distinct().firstOrNull()
-                } else null
+                // Default = All groups; user চাইলে dropdown থেকে filter করবে
+                groupFilter = null
                 focusedIndex = 0
 
                 binding.progressBar.visibility = View.GONE
