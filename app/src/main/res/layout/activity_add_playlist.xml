@@ -57,9 +57,12 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnAdd"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="52dp"
             android:text="@string/add_playlist"
-            android:textAllCaps="false" />
+            android:textColor="@android:color/white"
+            android:textAllCaps="false"
+            android:background="@drawable/bg_btn_orange"
+            app:backgroundTint="@null" />
 
         <ProgressBar
             android:id="@+id/progressBar"

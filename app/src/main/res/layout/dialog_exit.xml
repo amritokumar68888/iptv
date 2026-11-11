@@ -6,7 +6,7 @@
     android:orientation="vertical"
     android:gravity="center"
     android:padding="24dp"
-    android:background="@android:color/white">
+    android:background="@drawable/bg_dialog">
 
     <!-- Orange circle with ? -->
     <FrameLayout
@@ -34,7 +34,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/confirm_exit"
-        android:textColor="#1A1A1A"
+        android:textColor="@color/colorChannelName"
         android:textSize="20sp"
         android:textStyle="bold"
         android:layout_marginBottom="8dp" />
@@ -43,7 +43,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/exit_message"
-        android:textColor="#555555"
+        android:textColor="@color/colorSubText"
         android:textSize="14sp"
         android:gravity="center"
         android:layout_marginBottom="24dp" />

@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/colorBackground">
+    android:background="@drawable/bg_app_gradient">
 
     <!-- Toolbar -->
     <LinearLayout
@@ -14,7 +14,7 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingHorizontal="12dp"
-        android:background="@color/colorBackground">
+        android:background="@android:color/transparent">
 
         <ImageButton
             android:id="@+id/btnMenu"

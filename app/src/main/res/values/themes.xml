@@ -9,12 +9,13 @@
         <item name="colorOnSecondary">@color/colorOnSecondary</item>
         <item name="android:colorBackground">@color/colorBackground</item>
         <item name="colorSurface">@color/colorSurface</item>
+        <item name="colorOnSurface">@color/colorOnSurface</item>
         <item name="colorError">@color/colorError</item>
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:statusBarColor">@color/colorBackground</item>
         <item name="android:navigationBarColor">@color/colorBackground</item>
-        <item name="android:windowBackground">@color/colorBackground</item>
+        <item name="android:windowBackground">@drawable/bg_app_gradient</item>
     </style>
 
     <style name="Theme.IPTVPlayer.Player" parent="Theme.MaterialComponents.NoActionBar">
@@ -24,9 +25,11 @@
         <item name="android:navigationBarColor">@android:color/black</item>
     </style>
 
-    <style name="Theme.IPTVPlayer.Dialog" parent="Theme.MaterialComponents.Light.Dialog">
+    <style name="Theme.IPTVPlayer.Dialog" parent="Theme.MaterialComponents.Dialog">
         <item name="colorPrimary">@color/colorPrimary</item>
-        <item name="android:windowBackground">@android:color/white</item>
+        <item name="colorSurface">@color/colorSurface</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:statusBarColor">@color/colorBackground</item>
     </style>
 
 </resources>

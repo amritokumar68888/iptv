@@ -1,28 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Fun Time IPTV color palette -->
-    <color name="colorPrimary">#E87722</color>       <!-- orange accent -->
-    <color name="colorPrimaryVariant">#C45F00</color>
+    <!-- Sky OTT "Sunset" palette -->
+    <color name="colorPrimary">#FF8A3C</color>       <!-- warm orange accent -->
+    <color name="colorPrimaryVariant">#E06A1F</color>
     <color name="colorOnPrimary">#FFFFFF</color>
-    <color name="colorSecondary">#E87722</color>
+    <color name="colorSecondary">#E8388A</color>     <!-- magenta -->
     <color name="colorOnSecondary">#FFFFFF</color>
 
-    <color name="colorBackground">#0D0D0D</color>    <!-- near-black app bg -->
-    <color name="colorSurface">#1A1A1A</color>       <!-- card/surface bg -->
-    <color name="colorSurfaceVariant">#252525</color>
-    <color name="colorOnSurface">#FFFFFF</color>
-    <color name="colorOnSurfaceVariant">#AAAAAA</color>
+    <color name="colorBackground">#0B0912</color>    <!-- deep midnight -->
+    <color name="colorSurface">#171322</color>       <!-- card/surface bg -->
+    <color name="colorSurfaceVariant">#221C33</color>
+    <color name="colorOnSurface">#F6F1FF</color>
+    <color name="colorOnSurfaceVariant">#A79FBC</color>
 
-    <color name="colorCard">#1C1C1C</color>          <!-- channel card -->
-    <color name="colorCardSelected">#8B0000</color>  <!-- selected/active dark red -->
-    <color name="colorDivider">#2A2A2A</color>
-    <color name="colorOrange">#E87722</color>
-    <color name="colorOrangeLight">#FFB347</color>
-    <color name="colorError">#CF6679</color>
+    <color name="colorCard">#171322</color>          <!-- channel card -->
+    <color name="colorCardSelected">#54204A</color>  <!-- selected/active -->
+    <color name="colorDivider">#2A2438</color>
+    <color name="colorOrange">#FF8A3C</color>
+    <color name="colorOrangeLight">#FFB877</color>
+    <color name="colorError">#FF5C8A</color>
 
-    <color name="colorLogoBackground">#2A2A2A</color>
-    <color name="colorNumberOrange">#E87722</color>
+    <color name="colorLogoBackground">#221C33</color>
+    <color name="colorNumberOrange">#FF8A3C</color>
     <color name="colorChannelName">#FFFFFF</color>
-    <color name="colorEpgText">#E87722</color>
-    <color name="colorSubText">#888888</color>
+    <color name="colorEpgText">#FFB877</color>
+    <color name="colorSubText">#9A90AC</color>
+
+    <!-- Gradients -->
+    <color name="colorGradientStart">#FF9A3C</color>
+    <color name="colorGradientEnd">#E8388A</color>
+    <color name="colorGradientBgStart">#0B0912</color>
+    <color name="colorGradientBgEnd">#1A1030</color>
+    <color name="colorGradientCardStart">#1C1630</color>
+    <color name="colorGradientCardEnd">#120E20</color>
 </resources>
