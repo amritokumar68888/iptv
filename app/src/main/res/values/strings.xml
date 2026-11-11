@@ -24,6 +24,10 @@
     <string name="all_groups">All groups</string>
     <string name="menu">Menu</string>
 
+    <!-- Developer / support credit -->
+    <string name="developer_credit">Software Development by Amrito Kumar Sarkar</string>
+    <string name="support_credit">Any issue contact: SKY COMMUNICATION SUPPORT TEAM</string>
+
     <!-- Misc -->
     <string name="no_channels">No channels found</string>
     <string name="toggle_favorite">Favourite</string>
