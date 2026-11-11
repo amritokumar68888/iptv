@@ -42,18 +42,24 @@ object IpAllowList {
         "https://raw.githubusercontent.com/amritokumar68888/iptv/main/update/allowed-ips.txt"
 
     /**
-     * Optional 2nd source (mirror)। GitHub fail হলে এটা try করা হবে।
+     * 2nd source (mirror) — jsDelivr CDN-তে GitHub repo-র একই file।
      *
-     * Google Drive-এ রাখতে চাইলে file টা "Anyone with the link" করে share
-     * করে এখানে বসান:
-     *   "https://drive.google.com/uc?export=download&id=<ALLOWED_IPS_FILE_ID>"
-     *
-     * খালি রাখলে শুধু IPS_URL ব্যবহার হবে।
+     * ⚠️ বাংলাদেশে `raw.githubusercontent.com` block/slow হলে এটা কাজ করবে।
+     * Google Drive-এ রাখতে চাইলে Drive URL-ও দিতে পারেন।
      */
-    const val IPS_URL_FALLBACK = ""
+    const val IPS_URL_FALLBACK =
+        "https://cdn.jsdelivr.net/gh/amritokumar68888/iptv@main/update/allowed-ips.txt"
 
     /** কোনো list পাওয়া না গেলে (একেবারে প্রথমবার + offline) এটাই ব্যবহার হবে */
-    val DEFAULT_IPS = listOf("103.7.4.12")
+    val DEFAULT_IPS = listOf("103.7.4.12", "103.7.5.16")
+
+    /** ছোট timeout — raw GitHub block/slow হলে দ্রুত CDN fallback-এ যাবে। */
+    private val client = okhttp3.OkHttpClient.Builder()
+        .connectTimeout(8, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(12, java.util.concurrent.TimeUnit.SECONDS)
+        .followRedirects(true)
+        .followSslRedirects(true)
+        .build()
 
     private const val PREFS = "ip_allowlist_prefs"
     private const val KEY_TEXT = "ips_text"
@@ -260,7 +266,7 @@ object IpAllowList {
         val cacheBusted = "$url" + (if (url.contains("?")) "&" else "?") +
                 "_=${System.currentTimeMillis()}"
 
-        var response = DriveClient.ok
+        var response = client
             .newCall(Request.Builder().url(cacheBusted).build())
             .execute()
 
@@ -268,7 +274,7 @@ object IpAllowList {
         if (DriveClient.isHtml(response)) {
             val html = response.body?.string().orEmpty()
             response.close()
-            response = DriveClient.ok
+            response = client
                 .newCall(Request.Builder().url(DriveClient.followConfirm(url, html)).build())
                 .execute()
         }

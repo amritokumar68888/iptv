@@ -14,6 +14,17 @@ object UpdateChecker {
     private const val PREFS = "app_update_prefs"
     private const val KEY_LAST_CHECK = "last_check_ms"
 
+    /**
+     * Manifest fetch-এর জন্য ছোট timeout — একটা source block/slow হলে
+     * ৩০ সেকেন্ড আটকে না থেকে দ্রুত পরের (CDN) source-এ যাবে।
+     */
+    private val client = okhttp3.OkHttpClient.Builder()
+        .connectTimeout(8, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(12, java.util.concurrent.TimeUnit.SECONDS)
+        .followRedirects(true)
+        .followSslRedirects(true)
+        .build()
+
     sealed class Result {
         /** নতুন version নেই */
         object UpToDate : Result()
@@ -94,13 +105,13 @@ object UpdateChecker {
         val cacheBusted = if (url.contains("?")) "$url&_=${System.currentTimeMillis()}"
                           else "$url?_=${System.currentTimeMillis()}"
 
-        var response = DriveClient.ok.newCall(Request.Builder().url(cacheBusted).build()).execute()
+        var response = client.newCall(Request.Builder().url(cacheBusted).build()).execute()
 
         // Drive confirm page হলে follow করো
         if (DriveClient.isHtml(response)) {
             val html = response.body?.string().orEmpty()
             response.close()
-            response = DriveClient.ok.newCall(
+            response = client.newCall(
                 Request.Builder().url(DriveClient.followConfirm(url, html)).build()
             ).execute()
         }

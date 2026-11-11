@@ -106,7 +106,9 @@ class MainActivity : AppCompatActivity() {
                 PLAY_UPDATE_REQUEST,
                 UpdateConfig.PLAY_FORCE_UPDATE
             )
-            return
+            // ⚠️ এখানে return করা হয় না। কিছু device installer-কে ভুলভাবে
+            //    "Play" বলে, তখন Play flow চুপচাপ কিছু না করে। তাই সবসময়
+            //    manifest-based check-ও চালানো হয় (এটা fail করলে কিছু হারায় না)।
         }
 
         // ── Sideload করা app → manifest-based updater ────────────────────────

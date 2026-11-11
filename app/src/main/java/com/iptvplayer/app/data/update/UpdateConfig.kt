@@ -41,15 +41,14 @@ object UpdateConfig {
         "https://raw.githubusercontent.com/amritokumar68888/iptv/main/update/update-manifest.json"
 
     /**
-     * Optional 2nd source (mirror)। GitHub fail হলে এটা try করা হবে।
+     * 2nd source (mirror) — jsDelivr CDN-তে GitHub repo-র একই file।
      *
-     * Google Drive-এ রাখতে চাইলে file টা "Anyone with the link" করে share
-     * করে এখানে বসান:
-     *   "https://drive.google.com/uc?export=download&id=<MANIFEST_FILE_ID>"
-     *
-     * খালি রাখলে শুধু MANIFEST_URL_OVERRIDE ব্যবহার হবে।
+     * ⚠️ বাংলাদেশে `raw.githubusercontent.com` অনেক সময় block/slow হয় —
+     *    তখন primary fail করলেও jsDelivr থেকে manifest পাওয়া যাবে।
+     *    (Google Drive-এ রাখতে চাইলে এখানে Drive URL-ও বসাতে পারেন।)
      */
-    const val MANIFEST_URL_FALLBACK = ""
+    const val MANIFEST_URL_FALLBACK =
+        "https://cdn.jsdelivr.net/gh/amritokumar68888/iptv@main/update/update-manifest.json"
 
     /** কত ঘণ্টা পর পর নিজে থেকে update check করবে (0 = প্রতিবার app খুললে) */
     const val CHECK_INTERVAL_HOURS = 1
