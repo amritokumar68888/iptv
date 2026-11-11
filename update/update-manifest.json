@@ -1,7 +1,7 @@
 {
-  "versionCode": 26,
-  "versionName": "2.6",
-  "apkUrl": "https://github.com/amritokumar68888/iptv/releases/download/v2.6-b26/SkyOTT.apk",
+  "versionCode": 27,
+  "versionName": "2.7",
+  "apkUrl": "https://github.com/amritokumar68888/iptv/releases/download/v2.7-b27/SkyOTT.apk",
   "changelog": "• নতুন চ্যানেল যোগ করা হয়েছে\n• প্লে-ব্যাক বাগ ফিক্স\n• পারফরম্যান্স উন্নতি",
   "forceUpdate": false,
   "minSupportedVersionCode": 1
