@@ -13,6 +13,16 @@
     <string name="error_playback">Playback error: %s</string>
     <string name="no_program">No Program found</string>
     <string name="channel_list">Channel List</string>
+    <string name="channel_not_found">Channel %1$d পাওয়া যায়নি</string>
+
+    <!-- Sort / filter / menu -->
+    <string name="sort_by">Sort by</string>
+    <string name="sort_name_asc">Name (A → Z)</string>
+    <string name="sort_name_desc">Name (Z → A)</string>
+    <string name="sort_group">Group</string>
+    <string name="filter_group">Filter by group</string>
+    <string name="all_groups">All groups</string>
+    <string name="menu">Menu</string>
 
     <!-- Misc -->
     <string name="no_channels">No channels found</string>

@@ -8,8 +8,12 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
+import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -36,7 +40,13 @@ class ChannelListActivity : AppCompatActivity() {
         const val MODE_ALL      = "all"
         const val MODE_RECENT   = "recent"
         const val EXTRA_MODE    = "mode"
+        const val EXTRA_OPEN_SEARCH = "open_search"
+        const val EXTRA_SORT    = "sort_mode"
         const val ASSET_PREFIX  = "asset://"
+
+        const val SORT_NAME_ASC  = "name_asc"
+        const val SORT_NAME_DESC = "name_desc"
+        const val SORT_GROUP     = "group"
     }
 
     private lateinit var binding: ActivityChannelListBinding
@@ -53,6 +63,19 @@ class ChannelListActivity : AppCompatActivity() {
 
     // Remote navigation focus index
     private var focusedIndex = 0
+
+    // ── Sort / group filter / toolbar focus ─────────────────────────────────
+    private enum class SortMode { NAME_ASC, NAME_DESC, GROUP }
+    private var sortMode = SortMode.NAME_ASC
+    private var groupFilter: String? = null          // null = সব group
+
+    /** -1 = channel list-এ focus, 0..N = toolbar-এর button-এ focus (remote) */
+    private var toolbarFocus = -1
+
+    private val toolbarItems: List<View> by lazy {
+        listOf(binding.btnBack, binding.btnSearch, binding.btnToggleView,
+            binding.btnSortList, binding.ivDropdown)
+    }
 
     private lateinit var listAdapter: ChannelListAdapter
     private lateinit var gridAdapter: ChannelGridAdapter
@@ -71,6 +94,13 @@ class ChannelListActivity : AppCompatActivity() {
         val title  = intent.getStringExtra(EXTRA_TITLE)  ?: getString(R.string.all_channels)
         val m3uUrl = intent.getStringExtra(EXTRA_M3U_URL) ?: ""
         val mode   = intent.getStringExtra(EXTRA_MODE)   ?: MODE_ALL
+        val openSearchOnStart = intent.getBooleanExtra(EXTRA_OPEN_SEARCH, false)
+
+        sortMode = when (intent.getStringExtra(EXTRA_SORT)) {
+            SORT_NAME_DESC -> SortMode.NAME_DESC
+            SORT_GROUP     -> SortMode.GROUP
+            else           -> SortMode.NAME_ASC
+        }
 
         binding.tvTitle.text = title
         binding.btnBack.setOnClickListener { finish() }
@@ -91,16 +121,11 @@ class ChannelListActivity : AppCompatActivity() {
         }
 
         binding.btnSearch.setOnClickListener {
-            isSearchVisible = !isSearchVisible
-            if (isSearchVisible) {
-                binding.searchBar.visibility = View.VISIBLE
-                binding.etSearch.requestFocus()
-                val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-                imm.showSoftInput(binding.etSearch, InputMethodManager.SHOW_IMPLICIT)
-            } else {
-                closeSearch()
-            }
+            if (isSearchVisible) closeSearch() else openSearch()
         }
+
+        binding.btnSortList.setOnClickListener { showSortDialog() }
+        binding.ivDropdown.setOnClickListener { showGroupFilterDialog() }
 
         binding.btnClearSearch.setOnClickListener { binding.etSearch.text.clear() }
 
@@ -119,6 +144,7 @@ class ChannelListActivity : AppCompatActivity() {
         }
 
         if (m3uUrl.isNotEmpty()) loadChannels(m3uUrl, mode)
+        if (openSearchOnStart) openSearch()
     }
 
     // ── Remote key handling ───────────────────────────────────────────────────
@@ -131,27 +157,80 @@ class ChannelListActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_DPAD_DOWN,
             KeyEvent.KEYCODE_CHANNEL_DOWN,
             KeyEvent.KEYCODE_PAGE_DOWN -> {
-                moveFocus(+1); true
+                if (toolbarFocus >= 0) exitToolbarFocus() else moveFocus(+1)
+                true
             }
             KeyEvent.KEYCODE_DPAD_UP,
             KeyEvent.KEYCODE_CHANNEL_UP,
             KeyEvent.KEYCODE_PAGE_UP -> {
-                moveFocus(-1); true
+                when {
+                    toolbarFocus >= 0 -> { /* toolbar-এ আছি, উপরে কিছু নেই */ }
+                    focusedIndex == 0  -> enterToolbarFocus()
+                    else               -> moveFocus(-1)
+                }
+                true
+            }
+            KeyEvent.KEYCODE_DPAD_LEFT -> {
+                if (toolbarFocus >= 0) moveToolbarFocus(-1)
+                true
+            }
+            KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                if (toolbarFocus >= 0) moveToolbarFocus(+1)
+                true
             }
             KeyEvent.KEYCODE_DPAD_CENTER,
             KeyEvent.KEYCODE_ENTER,
             KeyEvent.KEYCODE_BUTTON_A -> {
-                if (channelList.isNotEmpty()) {
-                    openPlayer(channelList[focusedIndex])
+                when {
+                    toolbarFocus >= 0 -> {
+                        toolbarItems.getOrNull(toolbarFocus)?.performClick()
+                        exitToolbarFocus()
+                    }
+                    channelList.isNotEmpty() -> openPlayer(channelList[focusedIndex])
                 }
                 true
             }
             KeyEvent.KEYCODE_BACK -> {
-                if (isSearchVisible) { closeSearch(); true }
-                else { finish(); true }
+                if (toolbarFocus >= 0) exitToolbarFocus()
+                else finish()
+                true
             }
             else -> super.dispatchKeyEvent(event)
         }
+    }
+
+    // ── Toolbar focus (remote) ────────────────────────────────────────────────
+
+    private fun enterToolbarFocus() {
+        toolbarFocus = 0
+        HighlightToolbar()
+    }
+
+    private fun exitToolbarFocus() {
+        toolbarFocus = -1
+        resetToolbarHighlight()
+        listAdapter.setFocused(focusedIndex)
+        gridAdapter.notifyDataSetChanged()
+        binding.recyclerChannels.scrollToPosition(focusedIndex)
+    }
+
+    private fun moveToolbarFocus(direction: Int) {
+        if (toolbarItems.isEmpty()) return
+        toolbarFocus = (toolbarFocus + direction + toolbarItems.size) % toolbarItems.size
+        HighlightToolbar()
+    }
+
+    private fun HighlightToolbar() {
+        val orange = ContextCompat.getColor(this, R.color.colorOrange)
+        val normal = ContextCompat.getColor(this, R.color.colorChannelName)
+        toolbarItems.forEachIndexed { i, v ->
+            (v as? ImageView)?.setColorFilter(if (i == toolbarFocus) orange else normal)
+        }
+    }
+
+    private fun resetToolbarHighlight() {
+        val normal = ContextCompat.getColor(this, R.color.colorChannelName)
+        toolbarItems.forEach { (it as? ImageView)?.setColorFilter(normal) }
     }
 
     private fun moveFocus(direction: Int) {
@@ -163,10 +242,22 @@ class ChannelListActivity : AppCompatActivity() {
         binding.recyclerChannels.scrollToPosition(focusedIndex)
     }
 
-    // ── Search ────────────────────────────────────────────────────────────────
+    // ── Search / sort / group filter ──────────────────────────────────────────
+
+    private fun openSearch() {
+        isSearchVisible = true
+        toolbarFocus = -1
+        resetToolbarHighlight()
+        binding.searchBar.visibility = View.VISIBLE
+        binding.etSearch.requestFocus()
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.showSoftInput(binding.etSearch, InputMethodManager.SHOW_IMPLICIT)
+    }
 
     private fun closeSearch() {
         isSearchVisible = false
+        toolbarFocus = -1
+        resetToolbarHighlight()
         binding.searchBar.visibility = View.GONE
         binding.etSearch.text.clear()
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
@@ -175,17 +266,72 @@ class ChannelListActivity : AppCompatActivity() {
         filterChannels("")
     }
 
+    private fun showSortDialog() {
+        val labels = arrayOf(
+            getString(R.string.sort_name_asc),
+            getString(R.string.sort_name_desc),
+            getString(R.string.sort_group)
+        )
+        val modes = arrayOf(SortMode.NAME_ASC, SortMode.NAME_DESC, SortMode.GROUP)
+        val checked = modes.indexOf(sortMode)
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.sort_by)
+            .setSingleChoiceItems(labels, checked) { dialog, which ->
+                sortMode = modes[which]
+                dialog.dismiss()
+                filterChannels(currentQuery)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun showGroupFilterDialog() {
+        val groups = allChannels.map { it.group }.distinct()
+            .sortedBy { it.lowercase() }
+        val items = ArrayList<String>(groups.size + 1)
+        items.add(getString(R.string.all_groups))
+        items.addAll(groups)
+        val checked = groupFilter?.let { g -> groups.indexOf(g) + 1 } ?: 0
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.filter_group)
+            .setSingleChoiceItems(items.toTypedArray(), checked) { dialog, which ->
+                groupFilter = if (which == 0) null else groups[which - 1]
+                dialog.dismiss()
+                filterChannels(currentQuery)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun sorted(list: List<Channel>): List<Channel> = when (sortMode) {
+        SortMode.NAME_ASC  -> list.sortedBy { it.name.lowercase() }
+        SortMode.NAME_DESC -> list.sortedByDescending { it.name.lowercase() }
+        SortMode.GROUP     -> list.sortedWith(
+            compareBy({ it.group.lowercase() }, { it.name.lowercase() })
+        )
+    }
+
     private fun filterChannels(query: String) {
         currentQuery = query
-        val base = if (query.isEmpty()) allChannels
-        else allChannels.filter { it.name.contains(query, ignoreCase = true) }
-        val filtered = base.filterNot { it.url in hiddenUrls }
+
+        var base = allChannels
+        groupFilter?.let { g -> base = base.filter { it.group == g } }
+        if (query.isNotEmpty()) {
+            base = base.filter { it.name.contains(query, ignoreCase = true) }
+        }
+
+        val filtered = sorted(base).filterNot { it.url in hiddenUrls }
         channelList = filtered
         focusedIndex = 0
         listAdapter.setFocused(0)
         showChannels(filtered)
-        if (filtered.isEmpty() && query.isNotEmpty()) {
-            binding.tvEmpty.text = "\"$query\" পাওয়া যায়নি"
+
+        binding.tvEmpty.text = if (filtered.isEmpty() && query.isNotEmpty()) {
+            "\"$query\" পাওয়া যায়নি"
+        } else {
+            getString(R.string.no_channels)
         }
     }
 
@@ -324,11 +470,11 @@ class ChannelListActivity : AppCompatActivity() {
                 }
                 hiddenUrls.clear()
                 currentQuery = ""
-                channelList = allChannels
+                groupFilter = null
                 focusedIndex = 0
 
                 binding.progressBar.visibility = View.GONE
-                showChannels(channelList)
+                filterChannels("")
 
                 // dead channel গুলো background-এ বাদ দাও
                 applyHealthFilterAndVerify()

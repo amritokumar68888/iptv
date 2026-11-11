@@ -14,6 +14,7 @@ import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
@@ -234,23 +235,71 @@ class MainActivity : AppCompatActivity() {
 
         binding.rowCheckUpdate.setOnClickListener { manualUpdateCheck() }
 
-        binding.rowAllChannels.setOnClickListener {
-            val url = M3uUpdater.getM3uSource(this)
-            startActivity(Intent(this, ChannelListActivity::class.java).apply {
-                putExtra(ChannelListActivity.EXTRA_TITLE,   getString(R.string.all_channels))
-                putExtra(ChannelListActivity.EXTRA_M3U_URL, url)
-                putExtra(ChannelListActivity.EXTRA_MODE,    ChannelListActivity.MODE_ALL)
-            })
-        }
+        binding.rowAllChannels.setOnClickListener { openChannelList() }
+        binding.rowRecentWatch.setOnClickListener { openRecentWatch() }
 
-        binding.rowRecentWatch.setOnClickListener {
-            val url = M3uUpdater.getM3uSource(this)
-            startActivity(Intent(this, ChannelListActivity::class.java).apply {
-                putExtra(ChannelListActivity.EXTRA_TITLE,   getString(R.string.recent_watch))
-                putExtra(ChannelListActivity.EXTRA_M3U_URL, url)
-                putExtra(ChannelListActivity.EXTRA_MODE,    ChannelListActivity.MODE_RECENT)
-            })
-        }
+        // ── Top toolbar (remote + touch) ─────────────────────────────────────
+        binding.btnMenu.setOnClickListener { showMainMenu() }
+        binding.btnSearch.setOnClickListener { openChannelList(openSearch = true) }
+        binding.btnSort.setOnClickListener { showMainSortDialog() }
+    }
+
+    /** All Channels page খোলে (optionally search খোলা অবস্থায় / sort mode সহ)। */
+    private fun openChannelList(openSearch: Boolean = false, sort: String? = null) {
+        val url = M3uUpdater.getM3uSource(this)
+        startActivity(Intent(this, ChannelListActivity::class.java).apply {
+            putExtra(ChannelListActivity.EXTRA_TITLE,   getString(R.string.all_channels))
+            putExtra(ChannelListActivity.EXTRA_M3U_URL, url)
+            putExtra(ChannelListActivity.EXTRA_MODE,    ChannelListActivity.MODE_ALL)
+            if (openSearch) putExtra(ChannelListActivity.EXTRA_OPEN_SEARCH, true)
+            sort?.let { putExtra(ChannelListActivity.EXTRA_SORT, it) }
+        })
+    }
+
+    private fun openRecentWatch() {
+        val url = M3uUpdater.getM3uSource(this)
+        startActivity(Intent(this, ChannelListActivity::class.java).apply {
+            putExtra(ChannelListActivity.EXTRA_TITLE,   getString(R.string.recent_watch))
+            putExtra(ChannelListActivity.EXTRA_M3U_URL, url)
+            putExtra(ChannelListActivity.EXTRA_MODE,    ChannelListActivity.MODE_RECENT)
+        })
+    }
+
+    private fun showMainMenu() {
+        val items = arrayOf(
+            getString(R.string.all_channels),
+            getString(R.string.recent_watch),
+            getString(R.string.check_for_update)
+        )
+        AlertDialog.Builder(this)
+            .setTitle(R.string.menu)
+            .setItems(items) { _, which ->
+                when (which) {
+                    0 -> openChannelList()
+                    1 -> openRecentWatch()
+                    2 -> manualUpdateCheck()
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun showMainSortDialog() {
+        val labels = arrayOf(
+            getString(R.string.sort_name_asc),
+            getString(R.string.sort_name_desc),
+            getString(R.string.sort_group)
+        )
+        val modes = arrayOf(
+            ChannelListActivity.SORT_NAME_ASC,
+            ChannelListActivity.SORT_NAME_DESC,
+            ChannelListActivity.SORT_GROUP
+        )
+        AlertDialog.Builder(this)
+            .setTitle(R.string.sort_by)
+            .setItems(labels) { _, which -> openChannelList(sort = modes[which]) }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     // ── IP Check (background, non-blocking) ───────────────────────────────────

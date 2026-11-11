@@ -54,6 +54,13 @@ class PlayerActivity : AppCompatActivity() {
     private var consecutiveFailures = 0
     private val maxAutoSkips get() = minOf(channelList.size, 15)
 
+    // ── Numeric channel entry (remote 0-9 → jump to that serial number) ───────
+    // গ্রাহক remote-এ 55 চাপলে ৫৫ নম্বর channel-এ যাবে (1 = প্রথম channel)।
+    private val numberBuffer = StringBuilder()
+    private val numberHandler = Handler(Looper.getMainLooper())
+    private val numberCommitRunnable = Runnable { commitChannelNumber() }
+    private val numberTimeoutMs = 1_500L
+
     private val hideHandler = Handler(Looper.getMainLooper())
     private val hideRunnable = Runnable { hideControls() }
 
@@ -323,6 +330,44 @@ class PlayerActivity : AppCompatActivity() {
         switchToChannel((currentIndex + direction + channelList.size) % channelList.size)
     }
 
+    // ── Numeric channel entry ──────────────────────────────────────────────────
+
+    /** remote-এর একটা digit যোগ করে; শেষ digit-এর ১.৫ সেকেন্ড পর নিজেই switch। */
+    private fun appendChannelDigit(digit: Int) {
+        numberHandler.removeCallbacks(numberCommitRunnable)
+        if (numberBuffer.length >= 4) numberBuffer.setLength(0)  // খুব লম্বা হলে নতুন করে
+        numberBuffer.append(digit)
+        binding.tvChannelNumber.text = numberBuffer.toString()
+        binding.tvChannelNumber.visibility = View.VISIBLE
+        numberHandler.postDelayed(numberCommitRunnable, numberTimeoutMs)
+    }
+
+    /** টাইপ করা number → ওই serial-এর channel (1 = প্রথম channel)। */
+    private fun commitChannelNumber() {
+        numberHandler.removeCallbacks(numberCommitRunnable)
+        if (numberBuffer.isEmpty()) return
+
+        val number = numberBuffer.toString().toIntOrNull() ?: 0
+        numberBuffer.setLength(0)
+        binding.tvChannelNumber.visibility = View.GONE
+
+        if (number in 1..channelList.size) {
+            switchToChannel(number - 1)
+        } else {
+            Toast.makeText(
+                this,
+                getString(R.string.channel_not_found, number),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    private fun clearChannelNumber() {
+        numberHandler.removeCallbacks(numberCommitRunnable)
+        numberBuffer.setLength(0)
+        binding.tvChannelNumber.visibility = View.GONE
+    }
+
     /**
      * পরের এমন index যেটা cache অনুযায়ী dead নয়।
      * সব dead হলে -1 (তখন error message দেখানো হয়)।
@@ -338,6 +383,8 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun switchToChannel(index: Int) {
         if (index < 0 || index >= channelList.size) return
+
+        clearChannelNumber()
 
         // আগের channel-এর URL মরে গিয়েছিল কিনা দেখা হয়ে গেছে;
         // নতুন channel শুরুর আগে error message মুছে দাও
@@ -493,7 +540,10 @@ class PlayerActivity : AppCompatActivity() {
             // ── OK / Enter → menu open OR focused button click OR play channel ─
             KeyEvent.KEYCODE_DPAD_CENTER,
             KeyEvent.KEYCODE_BUTTON_A -> {
-                when {
+                if (numberBuffer.isNotEmpty()) {
+                    // টাইপ করা channel number confirm
+                    commitChannelNumber()
+                } else when {
                     // Channel overlay খোলা → focused channel play করো
                     binding.channelListOverlay.visibility == View.VISIBLE -> {
                         hideChannelList()
@@ -507,6 +557,24 @@ class PlayerActivity : AppCompatActivity() {
                     // Controls hidden → show করো
                     else -> showControls()
                 }
+                true
+            }
+
+            // ── Numeric channel entry — remote 0-9 / numpad ───────────────────
+            KeyEvent.KEYCODE_0, KeyEvent.KEYCODE_1, KeyEvent.KEYCODE_2,
+            KeyEvent.KEYCODE_3, KeyEvent.KEYCODE_4, KeyEvent.KEYCODE_5,
+            KeyEvent.KEYCODE_6, KeyEvent.KEYCODE_7, KeyEvent.KEYCODE_8,
+            KeyEvent.KEYCODE_9 -> {
+                appendChannelDigit(keyCode - KeyEvent.KEYCODE_0)
+                true
+            }
+
+            KeyEvent.KEYCODE_NUMPAD_0, KeyEvent.KEYCODE_NUMPAD_1,
+            KeyEvent.KEYCODE_NUMPAD_2, KeyEvent.KEYCODE_NUMPAD_3,
+            KeyEvent.KEYCODE_NUMPAD_4, KeyEvent.KEYCODE_NUMPAD_5,
+            KeyEvent.KEYCODE_NUMPAD_6, KeyEvent.KEYCODE_NUMPAD_7,
+            KeyEvent.KEYCODE_NUMPAD_8, KeyEvent.KEYCODE_NUMPAD_9 -> {
+                appendChannelDigit(keyCode - KeyEvent.KEYCODE_NUMPAD_0)
                 true
             }
 
@@ -640,5 +708,5 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onStart()   { super.onStart();   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) player?.play() }
     override fun onStop()    { super.onStop();    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && !isInPictureInPictureMode) player?.pause() }
-    override fun onDestroy() { super.onDestroy(); hideHandler.removeCallbacksAndMessages(null); player?.release(); player = null }
+    override fun onDestroy() { super.onDestroy(); hideHandler.removeCallbacksAndMessages(null); numberHandler.removeCallbacksAndMessages(null); player?.release(); player = null }
 }
