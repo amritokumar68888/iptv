@@ -34,6 +34,17 @@
             android:layout_height="44dp"
             android:background="@drawable/bg_channel_logo" />
 
+        <!-- First-letter gradient avatar (shown when the playlist has no logo) -->
+        <TextView
+            android:id="@+id/tvLetter"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:gravity="center"
+            android:textColor="@color/colorChannelName"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:background="@drawable/bg_letter_avatar" />
+
         <ImageView
             android:id="@+id/ivLogo"
             android:layout_width="36dp"

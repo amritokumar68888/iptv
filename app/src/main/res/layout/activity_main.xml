@@ -69,13 +69,16 @@
         android:id="@+id/rowAllChannels"
         android:layout_width="match_parent"
         android:layout_height="64dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="8dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingHorizontal="20dp"
         android:focusable="true"
         android:focusableInTouchMode="false"
         android:nextFocusDown="@id/rowRecentWatch"
-        android:background="@drawable/bg_row_selector">
+        android:background="@drawable/bg_update_row">
 
         <ImageView
             android:layout_width="28dp"
@@ -121,13 +124,16 @@
         android:id="@+id/rowRecentWatch"
         android:layout_width="match_parent"
         android:layout_height="64dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="8dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingHorizontal="20dp"
         android:focusable="true"
         android:focusableInTouchMode="false"
         android:nextFocusUp="@id/rowAllChannels"
-        android:background="@drawable/bg_row_selector">
+        android:background="@drawable/bg_update_row">
 
         <ImageView
             android:layout_width="28dp"

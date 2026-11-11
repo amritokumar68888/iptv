@@ -55,17 +55,16 @@ class ChannelListAdapter(
                 .start()
             b.root.elevation = if (isFocused) 10f * density else 0f
 
-            // Logo
-            if (channel.logoUrl.isNotEmpty()) {
+            // Channel icon: gradient first-letter avatar; real logo (if any) drawn on top
+            b.tvLetter.text = channel.name.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
+            b.ivLogo.setImageDrawable(null)
+            val logo = normalizeLogo(channel.logoUrl)
+            if (logo.isNotEmpty()) {
                 Glide.with(b.root.context)
-                    .load(channel.logoUrl)
-                    .placeholder(R.drawable.ic_tv)
-                    .error(R.drawable.ic_tv)
+                    .load(logo)
                     .fitCenter()
                     .timeout(8000)
                     .into(b.ivLogo)
-            } else {
-                b.ivLogo.setImageResource(R.drawable.ic_tv)
             }
 
             // Click handler on root
@@ -80,6 +79,19 @@ class ChannelListAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.bind(getItem(position), position)
+    }
+
+    /**
+     * Some playlists store an Imgur *page* link (imgur.com/ID.png) instead of the
+     * direct image (i.imgur.com/ID.png), so the logo never loads. Normalize it.
+     */
+    private fun normalizeLogo(url: String): String {
+        val u = url.trim()
+        if (u.isEmpty()) return ""
+        if (u.contains("imgur.com/") && !u.contains("i.imgur.com/")) {
+            return u.replace("imgur.com/", "i.imgur.com/")
+        }
+        return u
     }
 
     class Diff : DiffUtil.ItemCallback<Channel>() {
