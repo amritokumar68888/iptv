@@ -63,6 +63,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private val hideHandler = Handler(Looper.getMainLooper())
     private val hideRunnable = Runnable { hideControls() }
+    private val floatAnimators = mutableListOf<android.animation.ObjectAnimator>()
 
     companion object {
         const val EXTRA_CHANNEL_NAME        = "channel_name"
@@ -163,6 +164,7 @@ class PlayerActivity : AppCompatActivity() {
         else { Toast.makeText(this, getString(R.string.error_invalid_url), Toast.LENGTH_LONG).show(); finish() }
 
         showControls()
+        startIdleFloat()
     }
 
     // ── Orientation / Fullscreen ──────────────────────────────────────────────
@@ -676,12 +678,15 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
-    /** Highlight the focused button with orange tint + a subtle "3D" lift, reset others */
+    /** Highlight the focused button with orange tint + gradient 4-side border + "3D" lift */
     private fun highlightButton(index: Int) {
         controlButtons.forEachIndexed { i, btn ->
             val focused = i == index
             val color = if (focused) getColor(R.color.colorOrange) else android.graphics.Color.WHITE
             btn.setColorFilter(color)
+            btn.setBackgroundResource(
+                if (focused) R.drawable.bg_player_btn_focused else R.drawable.bg_player_btn
+            )
             btn.animate()
                 .scaleX(if (focused) 1.18f else 1f)
                 .scaleY(if (focused) 1.18f else 1f)
@@ -694,7 +699,26 @@ class PlayerActivity : AppCompatActivity() {
     private fun resetButtonHighlights() {
         controlButtons.forEach {
             it.setColorFilter(android.graphics.Color.WHITE)
+            it.setBackgroundResource(R.drawable.bg_player_btn)
             it.animate().scaleX(1f).scaleY(1f).setDuration(120).start()
+        }
+    }
+
+    /**
+     * সব player control button-এ সারাক্ষণ হালকা float (up-down) movement।
+     * "All-time movement" effect — থামে না, যাতে icon-গুলো জীবন্ত/3D লাগে।
+     */
+    private fun startIdleFloat() {
+        val dp = resources.displayMetrics.density
+        controlButtons.forEachIndexed { i, btn ->
+            val anim = android.animation.ObjectAnimator.ofFloat(btn, "translationY", 0f, -4f * dp)
+            anim.duration = 1600
+            anim.startDelay = (i * 90).toLong()
+            anim.repeatMode = android.animation.ValueAnimator.REVERSE
+            anim.repeatCount = android.animation.ValueAnimator.INFINITE
+            anim.interpolator = android.view.animation.AccelerateDecelerateInterpolator()
+            anim.start()
+            floatAnimators.add(anim)
         }
     }
 
@@ -717,5 +741,5 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onStart()   { super.onStart();   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) player?.play() }
     override fun onStop()    { super.onStop();    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && !isInPictureInPictureMode) player?.pause() }
-    override fun onDestroy() { super.onDestroy(); hideHandler.removeCallbacksAndMessages(null); numberHandler.removeCallbacksAndMessages(null); player?.release(); player = null }
+    override fun onDestroy() { super.onDestroy(); hideHandler.removeCallbacksAndMessages(null); numberHandler.removeCallbacksAndMessages(null); floatAnimators.forEach { it.cancel() }; player?.release(); player = null }
 }

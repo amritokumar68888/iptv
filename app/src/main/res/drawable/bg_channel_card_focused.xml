@@ -1,11 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="rectangle">
-    <gradient
-        android:angle="270"
-        android:startColor="@color/colorGradientCardStart"
-        android:endColor="@color/colorGradientCardEnd"
-        android:type="linear" />
-    <stroke android:width="2dp" android:color="@color/colorOrange" />
-    <corners android:radius="12dp" />
-</shape>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Outer: gradient border (all 4 sides) -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="0"
+                android:startColor="@color/colorGradientStart"
+                android:endColor="@color/colorGradientEnd"
+                android:type="linear" />
+            <corners android:radius="14dp" />
+        </shape>
+    </item>
+    <!-- Inner: card fill -->
+    <item android:left="2dp" android:top="2dp" android:right="2dp" android:bottom="2dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#F2141024" />
+            <corners android:radius="12dp" />
+        </shape>
+    </item>
+</layer-list>
