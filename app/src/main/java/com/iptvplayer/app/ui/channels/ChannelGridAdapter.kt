@@ -1,11 +1,14 @@
 package com.iptvplayer.app.ui.channels
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.iptvplayer.app.R
+import com.iptvplayer.app.data.logo.ChannelLogoStore
 import com.iptvplayer.app.data.model.Channel
 import com.iptvplayer.app.databinding.ItemChannelGridBinding
 
@@ -26,8 +29,21 @@ class ChannelGridAdapter(
         RecyclerView.ViewHolder(b.root) {
         fun bind(channel: Channel, position: Int) {
             b.tvChannelName.text = channel.name
-            // First letter avatar
-            b.tvLetter.text = channel.name.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
+            // Real channel logo (fallback: generated initial-avatar)
+            b.tvLetter.visibility = View.GONE
+            val avatar = ChannelAvatar.drawable(channel.name, b.root.context)
+            b.ivLogo.setImageDrawable(avatar)
+            val mapped = ChannelLogoStore.logoFor(b.root.context, channel.name)
+            val logo = ChannelLogoStore.normalizeLogoUrl(channel.logoUrl.ifBlank { mapped ?: "" })
+            if (logo.isNotEmpty()) {
+                Glide.with(b.root.context)
+                    .load(logo)
+                    .placeholder(avatar)
+                    .error(avatar)
+                    .fitCenter()
+                    .timeout(8000)
+                    .into(b.ivLogo)
+            }
             // EPG placeholder
             b.tvEpg.text = "No Program found"
 

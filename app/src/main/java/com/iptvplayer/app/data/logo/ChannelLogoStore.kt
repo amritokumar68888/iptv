@@ -101,4 +101,14 @@ object ChannelLogoStore {
             .filter { it.isNotEmpty() && it !in stop }
             .joinToString("")
     }
+
+    /** Imgur page link (imgur.com/ID.png) → direct image (i.imgur.com/ID.png)। */
+    fun normalizeLogoUrl(url: String): String {
+        val u = url.trim()
+        if (u.isEmpty()) return ""
+        if (u.contains("imgur.com/") && !u.contains("i.imgur.com/")) {
+            return u.replace("imgur.com/", "i.imgur.com/")
+        }
+        return u
+    }
 }

@@ -39,6 +39,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private var channelName: String = ""
     private var channelUrl: String = ""
+    private var channelLogoUrl: String = ""
     private var currentIndex: Int = -1
     private var channelList: List<Channel> = emptyList()
 
@@ -88,6 +89,7 @@ class PlayerActivity : AppCompatActivity() {
 
         channelName  = intent.getStringExtra(EXTRA_CHANNEL_NAME) ?: ""
         channelUrl   = intent.getStringExtra(EXTRA_CHANNEL_URL)  ?: ""
+        channelLogoUrl = intent.getStringExtra(EXTRA_CHANNEL_LOGO) ?: ""
         currentIndex = intent.getIntExtra(EXTRA_CHANNEL_INDEX, -1)
 
         val names  = intent.getStringArrayListExtra(EXTRA_CHANNEL_LIST_NAMES) ?: arrayListOf()
@@ -101,8 +103,8 @@ class PlayerActivity : AppCompatActivity() {
         binding.tvChannelName.text = "${currentIndex + 1}-$channelName"
         updateTime()
 
-        // Default logo — app logo দেখাবে
-        binding.ivChannelLogo.setImageResource(R.drawable.logo)
+        // Channel logo (from playlist or remote logo map; app logo as fallback)
+        loadChannelLogo(channelName, channelLogoUrl)
 
         // PlayerView-এ focus দাও — remote OK চাপলে back না হয়ে playerView-এ যায়
         binding.playerView.isFocusable = true
@@ -397,10 +399,24 @@ class PlayerActivity : AppCompatActivity() {
         binding.tvError.visibility = View.GONE
         binding.btnPlayPause.setImageResource(R.drawable.ic_pause)
 
-        // Channel logo — channel-এর logo থাকলে সেটা, না হলে app logo
-        if (ch.logoUrl.isNotEmpty()) {
+        // Channel logo — playlist/remote-map থেকে, না থাকলে app logo
+        loadChannelLogo(ch.name, ch.logoUrl)
+
+        player?.release(); player = null
+        initializePlayer(ch.url)
+        overlayAdapter.selectedUrl = ch.url
+        binding.recyclerChannelList.scrollToPosition(currentIndex)
+        showControls()
+    }
+
+    /** Channel logo — playlist/remote map থেকে; না পেলে app logo। */
+    private fun loadChannelLogo(name: String, logoUrl: String) {
+        val mapped = com.iptvplayer.app.data.logo.ChannelLogoStore.logoFor(this, name)
+        val url = com.iptvplayer.app.data.logo.ChannelLogoStore
+            .normalizeLogoUrl(logoUrl.ifBlank { mapped ?: "" })
+        if (url.isNotEmpty()) {
             com.bumptech.glide.Glide.with(this)
-                .load(ch.logoUrl)
+                .load(url)
                 .placeholder(R.drawable.logo)
                 .error(R.drawable.logo)
                 .fitCenter()
@@ -408,12 +424,6 @@ class PlayerActivity : AppCompatActivity() {
         } else {
             binding.ivChannelLogo.setImageResource(R.drawable.logo)
         }
-
-        player?.release(); player = null
-        initializePlayer(ch.url)
-        overlayAdapter.selectedUrl = ch.url
-        binding.recyclerChannelList.scrollToPosition(currentIndex)
-        showControls()
     }
 
     // ── Overlay ───────────────────────────────────────────────────────────────
