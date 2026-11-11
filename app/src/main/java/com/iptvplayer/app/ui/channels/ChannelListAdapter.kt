@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.iptvplayer.app.R
 import com.iptvplayer.app.data.model.Channel
+import com.iptvplayer.app.data.logo.ChannelLogoStore
 import com.iptvplayer.app.databinding.ItemChannelListBinding
 
 class ChannelListAdapter(
@@ -69,7 +70,8 @@ class ChannelListAdapter(
             b.tvLetter.visibility = View.GONE
             val avatar = avatarDrawable(channel.name, b.root.context)
             b.ivLogo.setImageDrawable(avatar)
-            val logo = normalizeLogo(channel.logoUrl)
+            val mapped = ChannelLogoStore.logoFor(b.root.context, channel.name)
+            val logo = normalizeLogo(channel.logoUrl.ifBlank { mapped ?: "" })
             if (logo.isNotEmpty()) {
                 Glide.with(b.root.context)
                     .load(logo)

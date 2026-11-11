@@ -115,6 +115,14 @@ class ChannelListActivity : AppCompatActivity() {
 
         setListView()
 
+        // Remote channel-logo map (raw GitHub + CDN fallback) — load in background
+        lifecycleScope.launch {
+            if (com.iptvplayer.app.data.logo.ChannelLogoStore.refresh(this@ChannelListActivity)) {
+                listAdapter.notifyDataSetChanged()
+                gridAdapter.notifyDataSetChanged()
+            }
+        }
+
         binding.btnToggleView.setOnClickListener {
             isGridView = !isGridView
             if (isGridView) setGridView() else setListView()

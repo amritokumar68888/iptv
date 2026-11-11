@@ -18,6 +18,7 @@ on:
     paths-ignore:
       - 'update/update-manifest.json'
       - 'update/allowed-ips.txt'
+      - 'update/channel-logos.json'
       - '**/*.md'
   workflow_dispatch:
 
