@@ -676,17 +676,26 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
-    /** Highlight the focused button with orange tint, reset others to white */
+    /** Highlight the focused button with orange tint + a subtle "3D" lift, reset others */
     private fun highlightButton(index: Int) {
         controlButtons.forEachIndexed { i, btn ->
-            val color = if (i == index) getColor(R.color.colorOrange) else android.graphics.Color.WHITE
+            val focused = i == index
+            val color = if (focused) getColor(R.color.colorOrange) else android.graphics.Color.WHITE
             btn.setColorFilter(color)
+            btn.animate()
+                .scaleX(if (focused) 1.18f else 1f)
+                .scaleY(if (focused) 1.18f else 1f)
+                .setDuration(120)
+                .start()
         }
     }
 
     /** Reset all button tints to white */
     private fun resetButtonHighlights() {
-        controlButtons.forEach { it.setColorFilter(android.graphics.Color.WHITE) }
+        controlButtons.forEach {
+            it.setColorFilter(android.graphics.Color.WHITE)
+            it.animate().scaleX(1f).scaleY(1f).setDuration(120).start()
+        }
     }
 
     // ── Clock ─────────────────────────────────────────────────────────────────

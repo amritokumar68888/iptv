@@ -210,7 +210,7 @@ class ChannelListActivity : AppCompatActivity() {
         toolbarFocus = -1
         resetToolbarHighlight()
         listAdapter.setFocused(focusedIndex)
-        gridAdapter.notifyDataSetChanged()
+        gridAdapter.setFocused(focusedIndex)
         binding.recyclerChannels.scrollToPosition(focusedIndex)
     }
 
@@ -224,13 +224,22 @@ class ChannelListActivity : AppCompatActivity() {
         val orange = ContextCompat.getColor(this, R.color.colorOrange)
         val normal = ContextCompat.getColor(this, R.color.colorChannelName)
         toolbarItems.forEachIndexed { i, v ->
-            (v as? ImageView)?.setColorFilter(if (i == toolbarFocus) orange else normal)
+            val focused = i == toolbarFocus
+            (v as? ImageView)?.apply {
+                setColorFilter(if (focused) orange else normal)
+                setBackgroundResource(
+                    if (focused) R.drawable.bg_icon_chip_active else R.drawable.bg_icon_chip
+                )
+            }
         }
     }
 
     private fun resetToolbarHighlight() {
         val normal = ContextCompat.getColor(this, R.color.colorChannelName)
-        toolbarItems.forEach { (it as? ImageView)?.setColorFilter(normal) }
+        toolbarItems.forEach { (it as? ImageView)?.apply {
+            setColorFilter(normal)
+            setBackgroundResource(R.drawable.bg_icon_chip)
+        } }
     }
 
     private fun moveFocus(direction: Int) {
@@ -238,7 +247,7 @@ class ChannelListActivity : AppCompatActivity() {
         val newIndex = (focusedIndex + direction).coerceIn(0, channelList.size - 1)
         focusedIndex = newIndex
         listAdapter.setFocused(focusedIndex)
-        gridAdapter.notifyDataSetChanged()
+        gridAdapter.setFocused(focusedIndex)
         binding.recyclerChannels.scrollToPosition(focusedIndex)
     }
 
@@ -326,6 +335,7 @@ class ChannelListActivity : AppCompatActivity() {
         channelList = filtered
         focusedIndex = 0
         listAdapter.setFocused(0)
+        gridAdapter.setFocused(0)
         showChannels(filtered)
 
         binding.tvEmpty.text = if (filtered.isEmpty() && query.isNotEmpty()) {
@@ -421,6 +431,7 @@ class ChannelListActivity : AppCompatActivity() {
             else listAdapter.submitList(list)
             // Focus first item initially
             listAdapter.setFocused(focusedIndex)
+            gridAdapter.setFocused(focusedIndex)
         }
     }
 

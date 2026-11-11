@@ -1,6 +1,5 @@
 package com.iptvplayer.app.ui.channels
 
-import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
@@ -37,15 +36,24 @@ class ChannelListAdapter(
             b.tvNumber.text = (position + 1).toString()
             b.tvChannelName.text = channel.name
 
-            // Highlight: playing = dark red, focused by remote = orange tint
-            when {
-                channel.url == selectedUrl ->
-                    b.root.setBackgroundColor(Color.parseColor("#8B0000"))
-                position == focusedIndex ->
-                    b.root.setBackgroundColor(Color.parseColor("#1AE87722"))
-                else ->
-                    b.root.setBackgroundColor(Color.TRANSPARENT)
-            }
+            val isPlaying = channel.url == selectedUrl
+            val isFocused = position == focusedIndex
+
+            // Gradient highlight + 4-side border + "3D" lift on focus
+            b.root.setBackgroundResource(
+                when {
+                    isPlaying -> R.drawable.bg_channel_item_playing
+                    isFocused -> R.drawable.bg_channel_item_focused
+                    else      -> R.drawable.bg_channel_item_default
+                }
+            )
+            val density = b.root.resources.displayMetrics.density
+            b.root.animate()
+                .scaleX(if (isFocused) 1.03f else 1f)
+                .scaleY(if (isFocused) 1.03f else 1f)
+                .setDuration(140)
+                .start()
+            b.root.elevation = if (isFocused) 10f * density else 0f
 
             // Logo
             if (channel.logoUrl.isNotEmpty()) {
