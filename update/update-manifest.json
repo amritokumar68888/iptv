@@ -1,7 +1,7 @@
 {
-  "versionCode": 14,
-  "versionName": "1.9.4",
-  "apkUrl": "https://github.com/amritokumar68888/iptv/releases/download/v1.9.4-b14/SkyOTT.apk",
+  "versionCode": 15,
+  "versionName": "1.9.5",
+  "apkUrl": "https://github.com/amritokumar68888/iptv/releases/download/v1.9.5-b15/SkyOTT.apk",
   "changelog": "• নতুন চ্যানেল যোগ করা হয়েছে\n• প্লে-ব্যাক বাগ ফিক্স\n• পারফরম্যান্স উন্নতি",
   "forceUpdate": false,
   "minSupportedVersionCode": 1
