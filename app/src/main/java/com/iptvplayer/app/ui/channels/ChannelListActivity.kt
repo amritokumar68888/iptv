@@ -68,6 +68,7 @@ class ChannelListActivity : AppCompatActivity() {
     private enum class SortMode { NAME_ASC, NAME_DESC, GROUP }
     private var sortMode = SortMode.NAME_ASC
     private var groupFilter: String? = null          // null = সব group
+    private var baseTitle: String = ""
 
     /** -1 = channel list-এ focus, 0..N = toolbar-এর button-এ focus (remote) */
     private var toolbarFocus = -1
@@ -102,6 +103,7 @@ class ChannelListActivity : AppCompatActivity() {
             else           -> SortMode.NAME_ASC
         }
 
+        baseTitle = title
         binding.tvTitle.text = title
         binding.btnBack.setOnClickListener { finish() }
 
@@ -346,6 +348,9 @@ class ChannelListActivity : AppCompatActivity() {
         gridAdapter.setFocused(0)
         showChannels(filtered)
 
+        binding.tvTitle.text =
+            if (groupFilter != null) "$baseTitle · $groupFilter" else baseTitle
+
         binding.tvEmpty.text = if (filtered.isEmpty() && query.isNotEmpty()) {
             "\"$query\" পাওয়া যায়নি"
         } else {
@@ -489,7 +494,10 @@ class ChannelListActivity : AppCompatActivity() {
                 }
                 hiddenUrls.clear()
                 currentQuery = ""
-                groupFilter = null
+                // Default filter = প্রথম group (user চাইলে dropdown থেকে বদলাতে পারবে)
+                groupFilter = if (mode == MODE_ALL) {
+                    allChannels.map { it.group }.distinct().firstOrNull()
+                } else null
                 focusedIndex = 0
 
                 binding.progressBar.visibility = View.GONE
