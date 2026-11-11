@@ -40,7 +40,7 @@
         android:layout_width="match_parent"
         android:layout_height="160dp"
         android:layout_marginTop="8dp"
-        android:background="@color/colorBackground"
+        android:background="@drawable/bg_channel_card"
         android:padding="12dp">
 
         <TextView
@@ -119,7 +119,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="14dp"
-        android:background="@color/colorBackground"
+        android:background="@drawable/bg_status_gradient"
         android:clickable="true"
         android:focusable="true"
         android:lineSpacingMultiplier="1.25"
