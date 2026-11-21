@@ -21,6 +21,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.iptvplayer.app.R
@@ -457,7 +458,13 @@ class PlayerActivity : AppCompatActivity() {
             )
             .build()
 
-        player = ExoPlayer.Builder(this)
+        // Use the bundled FFmpeg software decoders first. Provider streams are
+        // MPEG-TS with MP2 audio; the platform MediaCodec has no MP2 decoder,
+        // so without this the video plays silently.
+        val renderersFactory = DefaultRenderersFactory(this)
+            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+
+        player = ExoPlayer.Builder(this, renderersFactory)
             .setLoadControl(loadControl)
             .build()
             .also { exo ->

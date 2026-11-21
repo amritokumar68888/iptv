@@ -3,8 +3,6 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <!-- In-app update: APK install করার জন্য -->
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- Update এলে notification দেখানোর জন্য (Android 13+ এ runtime permission) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
@@ -28,7 +26,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.IPTVPlayer"
         android:usesCleartextTraffic="true"
-        android:banner="@drawable/logo">
+        android:banner="@drawable/banner">
 
         <!-- Phone/Tablet launcher -->
         <activity
@@ -59,16 +57,8 @@
             android:supportsPictureInPicture="true"
             android:theme="@style/Theme.IPTVPlayer.Player" />
 
-        <!-- Update APK installer-এ পাঠানোর জন্য FileProvider -->
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.fileprovider"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
-        </provider>
+        <!-- Update APK installer-এ পাঠানোর জন্য FileProvider ছিল; এখন
+             browser-based download use kori, tai FileProvider lagbe na. -->
 
     </application>
 
