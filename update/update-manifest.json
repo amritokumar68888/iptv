@@ -1,7 +1,7 @@
 {
-  "versionCode": 33,
-  "versionName": "3.3",
-  "apkUrl": "https://github.com/amritokumar68888/iptv/releases/download/v3.3-b33/SkyOTT.apk",
+  "versionCode": 34,
+  "versionName": "3.4",
+  "apkUrl": "https://github.com/amritokumar68888/iptv/releases/download/v3.4-b34/SkyOTT.apk",
   "changelog": "• নতুন চ্যানেল যোগ করা হয়েছে\n• প্লে-ব্যাক বাগ ফিক্স\n• পারফরম্যান্স উন্নতি",
   "forceUpdate": false,
   "minSupportedVersionCode": 1
