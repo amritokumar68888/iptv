@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
+import android.media.audiofx.LoudnessEnhancer
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -37,6 +38,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityPlayerBinding
     private var player: ExoPlayer? = null
+    private var loudnessEnhancer: LoudnessEnhancer? = null
 
     private var channelName: String = ""
     private var channelUrl: String = ""
@@ -403,6 +405,7 @@ class PlayerActivity : AppCompatActivity() {
         // Channel logo — playlist/remote-map থেকে, না থাকলে app logo
         loadChannelLogo(ch.name, ch.logoUrl)
 
+        loudnessEnhancer?.release(); loudnessEnhancer = null
         player?.release(); player = null
         initializePlayer(ch.url)
         overlayAdapter.selectedUrl = ch.url
@@ -483,6 +486,10 @@ class PlayerActivity : AppCompatActivity() {
                             consecutiveFailures = 0
                             binding.tvError.visibility = View.GONE
                             StreamHealthChecker.markAlive(this@PlayerActivity, url)
+                            attachLoudness(exo.audioSessionId)
+                            binding.root.postDelayed({
+                                if (player === exo) attachLoudness(exo.audioSessionId)
+                            }, 800)
                         }
                     }
 
@@ -514,6 +521,24 @@ class PlayerActivity : AppCompatActivity() {
                     }
                 })
             }
+    }
+
+    /**
+     * Provider streams are often very quiet even at full system volume.
+     * LoudnessEnhancer adds gain at the audio-session level, so it works with
+     * both the FFmpeg and platform audio decoders.
+     */
+    private fun attachLoudness(audioSessionId: Int) {
+        if (audioSessionId == C.AUDIO_SESSION_ID_UNSET) return
+        try {
+            loudnessEnhancer?.release()
+            loudnessEnhancer = LoudnessEnhancer(audioSessionId).apply {
+                setTargetGain(800) // +8 dB
+                enabled = true
+            }
+        } catch (_: Exception) {
+            // Some devices do not expose the effect; playback continues normally.
+        }
     }
 
     // ── dispatchKeyEvent: ENTER কে DPAD_CENTER হিসেবে treat করো ─────────────
@@ -758,5 +783,5 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onStart()   { super.onStart();   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) player?.play() }
     override fun onStop()    { super.onStop();    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && !isInPictureInPictureMode) player?.pause() }
-    override fun onDestroy() { super.onDestroy(); hideHandler.removeCallbacksAndMessages(null); numberHandler.removeCallbacksAndMessages(null); floatAnimators.forEach { it.cancel() }; player?.release(); player = null }
+    override fun onDestroy() { super.onDestroy(); hideHandler.removeCallbacksAndMessages(null); numberHandler.removeCallbacksAndMessages(null); floatAnimators.forEach { it.cancel() }; loudnessEnhancer?.release(); loudnessEnhancer = null; player?.release(); player = null }
 }
