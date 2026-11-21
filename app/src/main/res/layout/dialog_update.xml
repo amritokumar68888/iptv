@@ -53,6 +53,36 @@
 
     </ScrollView>
 
+    <!-- Progress -->
+    <LinearLayout
+        android:id="@+id/progressGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <ProgressBar
+            android:id="@+id/progressUpdate"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="8dp"
+            android:max="100"
+            android:progressTint="@color/colorOrange"
+            android:progressBackgroundTint="@color/colorDivider" />
+
+        <TextView
+            android:id="@+id/tvUpdateProgress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:textColor="@color/colorSubText"
+            android:textSize="13sp"
+            android:text="0%" />
+
+    </LinearLayout>
+
     <!-- Buttons -->
     <LinearLayout
         android:id="@+id/buttonGroup"
@@ -84,5 +114,20 @@
             android:textColor="@android:color/white" />
 
     </LinearLayout>
+
+    <!-- Play Protect আটকালে গ্রাহকের জন্য helper -->
+    <TextView
+        android:id="@+id/tvPlayProtectHelp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:background="@drawable/bg_status_gradient"
+        android:clickable="true"
+        android:focusable="true"
+        android:lineSpacingMultiplier="1.25"
+        android:padding="12dp"
+        android:text="@string/play_protect_help"
+        android:textColor="@color/colorSubText"
+        android:textSize="12sp" />
 
 </LinearLayout>
