@@ -66,7 +66,7 @@ class MainActivity : AppCompatActivity() {
         checkForUpdate()
 
         // App version update check in background
-        checkForAppUpdate()
+        checkForAppUpdate(force = true)
 
         // Background check + notification (অ্যাপ বন্ধ থাকলেও)
         UpdateNotifier.ensureChannel(this)
@@ -95,12 +95,12 @@ class MainActivity : AppCompatActivity() {
 
     // ── App (APK) Update ──────────────────────────────────────────────────────
 
-    private fun checkForAppUpdate() {
+    private fun checkForAppUpdate(force: Boolean = false) {
         if (!UpdateConfig.CHECK_ON_START) return
 
         // ── Play Store থেকে install করা app → Play In-App Updates ────────────
         // normal app-এর মতো update — কোনো "Install unknown apps" prompt নেই
-        if (InstallSource.isFromPlay(this)) {
+        if (force && InstallSource.isFromPlay(this)) {
             setUpPlayCallbacks()
             playUpdateManager.checkAndStart(
                 PLAY_UPDATE_REQUEST,
@@ -114,9 +114,14 @@ class MainActivity : AppCompatActivity() {
         // ── Sideload করা app → manifest-based updater ────────────────────────
         // (গ্রাহককে একবার "Install unknown apps" allow করতে হবে)
         lifecycleScope.launch {
-            // ⚠️ অ্যাপ খুললেই **সবসময়** check — কোনো throttle নেই।
-            // গ্রাহক যাতে নিজে কিছু না চেপেই জেনে যায়।
-            when (val result = UpdateChecker.check(this@MainActivity)) {
+            // onCreate-তে force=true → সবসময় check.
+            // onResume-এ force=false → CHECK_INTERVAL_HOURS throttle মানে,
+            // তাই app background থেকে ফিরলেও update miss হয় না, আর বারবার
+            // network/dialog-ও হয় না।
+            val result = if (force) UpdateChecker.check(this@MainActivity)
+                         else UpdateChecker.checkIfDue(this@MainActivity)
+
+            when (result) {
                 is UpdateChecker.Result.Available -> {
                     // status bar-এ notification-ও দাও (dialog বন্ধ করে দিলেও থাকবে)
                     UpdateNotifier.notifyAvailable(
@@ -124,13 +129,14 @@ class MainActivity : AppCompatActivity() {
                     )
                     showUpdateDialog(result)
                 }
-                UpdateChecker.Result.UpToDate -> {
+                UpdateChecker.Result.UpToDate -> if (force) {
                     UpdateNotifier.clear(this@MainActivity)
                     setStatus(getString(R.string.already_latest), 4000)
                 }
-                is UpdateChecker.Result.Failed ->
-                    // আগে এখানে চুপচাপ ignore করা হতো — এখন দেখা যাবে
+                is UpdateChecker.Result.Failed -> if (force) {
+                    // onCreate-তে fail হলে status দেখাও; onResume-এ চুপচাপ
                     setStatus(getString(R.string.check_failed, result.message))
+                }
             }
         }
     }
@@ -399,6 +405,8 @@ class MainActivity : AppCompatActivity() {
         updateCounts()
         // Play update মাঝপথে থেমে থাকলে/ডাউনলোড শেষ হলে সেটা handle করে
         playUpdateManager.resumeIfPending()
+        // App background থেকে ফিরলে update check (throttled)
+        checkForAppUpdate(force = false)
     }
 
     override fun onDestroy() {
