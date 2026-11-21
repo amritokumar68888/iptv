@@ -46,8 +46,7 @@ object UpdateChecker {
             return@withContext Result.Failed("Update system এখনো configure করা হয়নি")
         }
         try {
-            val json = JSONObject(fetchTextFromAnySource())
-            val info = UpdateInfo.fromJson(json)
+            val info = fetchBestManifest()
 
             if (info.versionCode <= 0) {
                 return@withContext Result.Failed("Manifest-এ সঠিক versionCode নেই")
@@ -85,19 +84,24 @@ object UpdateChecker {
     }
 
     /**
-     * Configure করা সব source ক্রমে try করে — প্রথম যেটা সফল হয় সেটা ফেরত দেয়।
-     * (GitHub fail করলে Drive fallback কাজ করবে।)
+     * সব source থেকে manifest পড়ে **সর্বোচ্চ versionCode** টা বেছে নেয়।
+     * এতে কোনো CDN পুরনো version cache করে থাকলেও নতুন version miss হয় না।
      */
-    private fun fetchTextFromAnySource(): String {
+    private fun fetchBestManifest(): UpdateInfo {
+        var best: UpdateInfo? = null
         var lastError: Exception? = null
         for (source in UpdateConfig.manifestUrls) {
             try {
-                return fetchText(source)
+                val info = UpdateInfo.fromJson(JSONObject(fetchText(source)))
+                if (info.versionCode <= 0 || info.apkUrl.isBlank()) continue
+                if (best == null || info.versionCode > best!!.versionCode) {
+                    best = info
+                }
             } catch (e: Exception) {
                 lastError = e
             }
         }
-        throw lastError ?: IllegalStateException("কোনো manifest source নেই")
+        return best ?: throw lastError ?: IllegalStateException("কোনো manifest source নেই")
     }
 
     private fun fetchText(url: String): String {

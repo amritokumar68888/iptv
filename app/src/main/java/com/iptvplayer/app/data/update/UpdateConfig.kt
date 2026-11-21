@@ -41,17 +41,16 @@ object UpdateConfig {
         "https://raw.githubusercontent.com/amritokumar68888/iptv/main/update/update-manifest.json"
 
     /**
-     * 2nd source (mirror) — jsDelivr CDN-তে GitHub repo-র একই file।
-     *
-     * ⚠️ বাংলাদেশে `raw.githubusercontent.com` অনেক সময় block/slow হয় —
-     *    তখন primary fail করলেও jsDelivr থেকে manifest পাওয়া যাবে।
-     *    (Google Drive-এ রাখতে চাইলে এখানে Drive URL-ও বসাতে পারেন।)
+     * Mirrors — jsDelivr `@main` cache অনেক সময় পুরনো version ধরে রাখে,
+     * তাই fresh source হিসেবে Statically + raw.githack ব্যবহার করা হয়।
      */
     const val MANIFEST_URL_FALLBACK =
-        "https://cdn.jsdelivr.net/gh/amritokumar68888/iptv@main/update/update-manifest.json"
+        "https://cdn.statically.io/gh/amritokumar68888/iptv/main/update/update-manifest.json"
+    const val MANIFEST_URL_FALLBACK_2 =
+        "https://raw.githack.com/amritokumar68888/iptv/main/update/update-manifest.json"
 
     /** কত ঘণ্টা পর পর নিজে থেকে update check করবে (0 = প্রতিবার app খুললে) */
-    const val CHECK_INTERVAL_HOURS = 1
+    const val CHECK_INTERVAL_HOURS = 0
 
     /** App খোলার সাথে সাথে check করবে কি না */
     const val CHECK_ON_START = true
@@ -72,11 +71,11 @@ object UpdateConfig {
         else "https://drive.google.com/uc?export=download&id=$MANIFEST_FILE_ID"
 
     /**
-     * যে URL গুলো ক্রমে try করা হবে — প্রথম যেটা সফল হবে সেটাই ব্যবহার হবে।
-     * একটা host block/down হলেও update চেক বন্ধ হবে না।
+     * যে URL গুলো ক্রমে try করা হবে। একটা host block/down হলেও update চেক বন্ধ হবে না;
+     * সব source থেকে সর্বোচ্চ versionCode বেছে নেওয়া হয়।
      */
     val manifestUrls: List<String>
-        get() = listOf(manifestUrl, MANIFEST_URL_FALLBACK)
+        get() = listOf(manifestUrl, MANIFEST_URL_FALLBACK, MANIFEST_URL_FALLBACK_2)
             .map { it.trim() }
             .filter { it.isNotEmpty() }
             .distinct()
